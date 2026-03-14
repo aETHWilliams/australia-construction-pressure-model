@@ -1,5 +1,7 @@
 import streamlit as st
 import pandas as pd
+import folium
+from streamlit_folium import st_folium
 
 st.set_page_config(
     page_title="Australia Construction Pressure Index",
@@ -118,15 +120,40 @@ if search:
     else:
         st.markdown("<span style='color:#6b8cae'>No suburb found. Try a different name.</span>", unsafe_allow_html=True)
 
-# Map — using st.map (lightweight, no folium)
+# Map
 st.markdown('<div class="section-title">Pressure Map</div>', unsafe_allow_html=True)
 st.markdown(
-    "<span style='font-size:0.82rem;color:#6b8cae'>Top 500 highest-pressure suburbs shown.</span>",
+    "<span style='font-size:0.82rem;color:#6b8cae'>Top 500 highest-pressure suburbs. Click any marker for details. Red = highest pressure.</span>",
     unsafe_allow_html=True
 )
 
 map_data = results.dropna(subset=['lat', 'lon']).sort_values('pressure_score', ascending=False).head(500)
-st.map(map_data[['lat', 'lon']], latitude=-27.0, longitude=134.0, zoom=3)
+
+m = folium.Map(location=[-27.0, 134.0], zoom_start=4, tiles='CartoDB positron')
+
+for _, row in map_data.iterrows():
+    score = row['pressure_score']
+    colour = '#dc2626' if score >= 99 else '#d97706' if score >= 90 else '#2563a8'
+    radius = 7 + (score / 100) * 10
+    folium.CircleMarker(
+        location=[row['lat'], row['lon']],
+        radius=radius,
+        color=colour,
+        fill=True,
+        fill_color=colour,
+        fill_opacity=0.75,
+        popup=folium.Popup(
+            f"<b style='color:#1e3a5f'>{row['sa2_name']}</b> ({row['state']})<br>"
+            f"<b>Pressure Score:</b> {score}/100<br>"
+            f"<b>Pop Growth:</b> {row['erp_change_pct']}%<br>"
+            f"<b>Growth Years:</b> {int(row['years_of_growth'])}/22<br>"
+            f"<b>20yr Growth:</b> {round(row['growth_20yr']*100,1)}%",
+            max_width=220
+        ),
+        tooltip=f"{row['sa2_name']} - {score}/100"
+    ).add_to(m)
+
+st_folium(m, width=None, height=480, returned_objects=[])
 
 # Table
 st.markdown(
