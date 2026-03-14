@@ -2,18 +2,18 @@ import streamlit as st
 import pandas as pd
 import folium
 from streamlit_folium import st_folium
- 
+
 st.set_page_config(
     page_title="Australia Construction Pressure Index",
     page_icon="",
     layout="wide",
     initial_sidebar_state="expanded"
 )
- 
+
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Sora:wght@400;600;700&display=swap');
- 
+
     html, body, [class*="css"] {
         font-family: 'Inter', sans-serif;
         background-color: #f0f4f8;
@@ -21,7 +21,7 @@ st.markdown("""
     }
     .main { background-color: #f0f4f8; }
     .block-container { padding-top: 2rem; padding-bottom: 3rem; max-width: 1200px; }
- 
+
     .header-wrap {
         background: linear-gradient(135deg, #1e3a5f 0%, #2563a8 60%, #3b82c4 100%);
         border-radius: 16px;
@@ -132,61 +132,17 @@ st.markdown("""
     }
 </style>
 """, unsafe_allow_html=True)
- 
- 
+
+
 @st.cache_data
 def load_data():
-    return pd.read_csv("aus_pressure_scores_v4.csv")
- 
- 
-results = load_data()
- 
-COORDS = {
-    'Ripley': (-27.67, 152.82),
-    'Yarrabilba': (-27.79, 153.08),
-    'Chambers Flat - Logan Reserve': (-27.73, 153.09),
-    'Greenbank - North Maclean': (-27.75, 153.02),
-    'Flagstone (West) - New Beith': (-27.79, 152.96),
-    'Beaudesert': (-27.99, 152.86),
-    'Redbank Plains': (-27.62, 152.86),
-    'Palm Beach': (-28.10, 153.46),
-    'Jimboomba - Glenlogan': (-27.83, 153.02),
-    'Boronia Heights - Park Ridge': (-27.69, 153.02),
-    'Caboolture - South': (-27.09, 152.95),
-    'Beechboro': (-31.85, 115.93),
-    'Byford': (-32.22, 116.02),
-    'Baldivis - North': (-32.32, 115.83),
-    'Baldivis - South': (-32.38, 115.83),
-    'The Vines': (-31.72, 115.97),
-    'Mandurah - North': (-32.51, 115.73),
-    'Casuarina - Wandi': (-32.19, 115.88),
-    'Armadale - Wungong - Brookdale': (-32.15, 116.01),
-    'Piara Waters - Forrestdale': (-32.12, 115.92),
-    'Wellard (West) - Bertram': (-32.26, 115.84),
-    'Beaconsfield - Officer': (-38.07, 145.46),
-    'Sunbury - South': (-37.59, 144.71),
-    'Sunbury': (-37.58, 144.73),
-    'Greenvale - Bulla': (-37.62, 144.89),
-    'Lara': (-38.02, 144.40),
-    'Mickleham - Yuroke': (-37.60, 144.90),
-    'Pakenham - North West': (-38.06, 145.45),
-    'Grovedale - Mount Duneed': (-38.22, 144.33),
-    'Koo Wee Rup': (-38.20, 145.49),
-    'Heidelberg West': (-37.76, 145.04),
-    'Mount Barker': (-35.07, 138.86),
-    'Victor Harbor': (-35.55, 138.62),
-    'Gawler - South': (-34.62, 138.74),
-    'Virginia - Waterloo Corner': (-34.63, 138.57),
-    'Albion Park - Macquarie Pass': (-34.57, 150.80),
-    'Picton - Tahmoor - Buxton': (-34.18, 150.61),
-    'Thornton - Millers Forest': (-32.79, 151.64),
-    'Kingswood - Werrington': (-33.75, 150.73),
-    'Kurri Kurri - Abermain': (-32.82, 151.48),
-    'Morisset - Cooranbong': (-33.10, 151.49),
-    'Port Macquarie - West': (-31.44, 152.88),
-    'Albury - East': (-36.07, 146.94),
-}
- 
+    scores = pd.read_csv("aus_pressure_scores_v4.csv")
+    coords = pd.read_csv("suburb_coords.csv")
+    return scores, coords
+
+
+results, coords_df = load_data()
+
 # Header
 st.markdown("""
 <div class="header-wrap">
@@ -194,7 +150,7 @@ st.markdown("""
     <div class="header-sub">Predictive ML Model &nbsp;·&nbsp; 7.3M Records &nbsp;·&nbsp; 2,442 Suburbs Nationally</div>
 </div>
 """, unsafe_allow_html=True)
- 
+
 # Metrics
 c1, c2, c3, c4, c5 = st.columns(5)
 metrics = [
@@ -210,16 +166,16 @@ for col, (val, label) in zip([c1, c2, c3, c4, c5], metrics):
         <span class="metric-value">{val}</span>
         <span class="metric-label">{label}</span>
     </div>""", unsafe_allow_html=True)
- 
+
 # Sidebar
 st.sidebar.markdown("""
 <div style='font-family:Sora,sans-serif;font-size:1.1rem;font-weight:600;
 color:#1e3a5f;padding:0.5rem 0 1rem'>Filters</div>""", unsafe_allow_html=True)
- 
+
 states = ["All"] + sorted(results["state"].unique().tolist())
 selected = st.sidebar.selectbox("State", states)
 min_score = st.sidebar.slider("Minimum Pressure Score", 0, 100, 75)
- 
+
 st.sidebar.markdown("---")
 st.sidebar.markdown("""
 <div style='font-size:0.78rem; color:#6b8cae; line-height:2'>
@@ -230,14 +186,14 @@ ABS Population History 2001-2024<br>
 SEIFA Socioeconomic Index 2021<br>
 ABS Approvals 2025-26 FYTD
 </div>""", unsafe_allow_html=True)
- 
+
 # Filter
 filtered = results.copy()
 if selected != "All":
     filtered = filtered[filtered["state"] == selected]
 filtered = filtered[filtered["pressure_score"] >= min_score]
 filtered = filtered.sort_values("pressure_score", ascending=False)
- 
+
 # Search
 st.markdown('<div class="section-title">Suburb Search</div>', unsafe_allow_html=True)
 search = st.text_input("", placeholder="Search any suburb — e.g. Ripley, Byford, Sunbury...")
@@ -267,7 +223,7 @@ if search:
             "<span style='color:#6b8cae'>No suburb found. Try a different name.</span>",
             unsafe_allow_html=True
         )
- 
+
 # Map
 st.markdown('<div class="section-title">Pressure Map</div>', unsafe_allow_html=True)
 st.markdown(
@@ -275,15 +231,11 @@ st.markdown(
     "Click any marker for suburb details. Red = highest pressure.</span>",
     unsafe_allow_html=True
 )
- 
-map_data = results.merge(
-    pd.DataFrame([(k, v[0], v[1]) for k, v in COORDS.items()],
-                 columns=['sa2_name', 'lat', 'lon']),
-    on='sa2_name', how='inner'
-)
- 
+
+map_data = results.merge(coords_df.dropna(subset=['lat', 'lon']), on='sa2_name', how='inner')
+
 m = folium.Map(location=[-27.0, 134.0], zoom_start=4, tiles='CartoDB positron')
- 
+
 for _, row in map_data.iterrows():
     score = row['pressure_score']
     colour = '#dc2626' if score >= 99 else '#d97706' if score >= 90 else '#2563a8'
@@ -305,9 +257,9 @@ for _, row in map_data.iterrows():
         ),
         tooltip=f"{row['sa2_name']} - {score}/100"
     ).add_to(m)
- 
+
 st_folium(m, width=None, height=480, returned_objects=[])
- 
+
 # Table
 st.markdown(
     f'<div class="section-title">Ranked Suburbs'
@@ -316,7 +268,7 @@ st.markdown(
     f' &nbsp;·&nbsp; {len(filtered):,} results</span></div>',
     unsafe_allow_html=True
 )
- 
+
 display = filtered[[
     "sa2_name", "state", "pressure_score",
     "erp_change_pct", "growth_20yr",
@@ -330,7 +282,7 @@ display.columns = [
 display["20yr Growth"] = (display["20yr Growth"] * 100).round(1).astype(str) + "%"
 display["Pressure Score"] = display["Pressure Score"].round(1)
 st.dataframe(display, use_container_width=True, height=480, hide_index=True)
- 
+
 # State chart
 st.markdown(
     '<div class="section-title">High Pressure Suburbs by State</div>',
@@ -343,7 +295,7 @@ state_counts = (
     .sort_values("High Pressure Suburbs", ascending=False)
 )
 st.bar_chart(state_counts.set_index("state"))
- 
+
 # About
 st.markdown('<div class="section-title">About This Model</div>', unsafe_allow_html=True)
 st.markdown("""
