@@ -136,12 +136,10 @@ st.markdown("""
 
 @st.cache_data
 def load_data():
-    scores = pd.read_csv("aus_pressure_scores_v4.csv")
-    coords = pd.read_csv("suburb_coords.csv")
-    return scores, coords
+    return pd.read_csv("aus_pressure_scores_v4.csv")
 
 
-results, coords_df = load_data()
+results = load_data()
 
 # Header
 st.markdown("""
@@ -232,9 +230,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Merge coords then take top 500 by pressure score for performance
-map_data = results.merge(coords_df.dropna(subset=['lat', 'lon']), on='sa2_name', how='inner')
-map_data = map_data.sort_values('pressure_score', ascending=False).head(500)
+map_data = results.dropna(subset=['lat', 'lon']).sort_values('pressure_score', ascending=False).head(500)
 
 m = folium.Map(location=[-27.0, 134.0], zoom_start=4, tiles='CartoDB positron')
 
