@@ -1,0 +1,611 @@
+<!DOCTYPE html>
+<html>
+<head>
+    
+    <meta http-equiv="content-type" content="text/html; charset=UTF-8" />
+    <script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.js"></script>
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.js"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.3/dist/leaflet.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.2.2/dist/css/bootstrap.min.css"/>
+    <link rel="stylesheet" href="https://netdna.bootstrapcdn.com/bootstrap/3.0.0/css/bootstrap-glyphicons.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@fortawesome/fontawesome-free@6.2.0/css/all.min.css"/>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/Leaflet.awesome-markers/2.0.2/leaflet.awesome-markers.css"/>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/python-visualization/folium/folium/templates/leaflet.awesome.rotate.min.css"/>
+    
+            <meta name="viewport" content="width=device-width,
+                initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+            <style>
+                #map_aa850e919dfcf7ee8bbd2f1d16dc6186 {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+                .leaflet-container { font-size: 1rem; }
+            </style>
+
+            <style>html, body {
+                width: 100%;
+                height: 100%;
+                margin: 0;
+                padding: 0;
+            }
+            </style>
+
+            <style>#map {
+                position:absolute;
+                top:0;
+                bottom:0;
+                right:0;
+                left:0;
+                }
+            </style>
+
+            <script>
+                L_NO_TOUCH = false;
+                L_DISABLE_3D = false;
+            </script>
+
+        
+</head>
+<body>
+    
+    
+<h3 align="center" style="font-size:18px; font-family:Arial">
+<b>Brisbane 2032 — QLD Construction Pressure Map</b><br>
+<span style="font-size:13px">Predicted high-growth suburbs (XGBoost, AUC 0.83)</span>
+</h3>
+    
+<div style="position: fixed; bottom: 30px; left: 30px; z-index:9999;
+     background-color:white; padding:12px; border-radius:8px;
+     border:2px solid grey; font-family:Arial; font-size:13px">
+<b>Pressure Score</b><br>
+<span style="color:#d32f2f">●</span> 99-100 Extreme surge predicted<br>
+<span style="color:#f57c00">●</span> 90-98 High growth likely<br>
+<span style="color:#fbc02d">●</span> 75-89 Moderate pressure<br>
+<span style="color:#388e3c">●</span> Below 75 Low pressure
+</div>
+    
+            <div class="folium-map" id="map_aa850e919dfcf7ee8bbd2f1d16dc6186" ></div>
+        
+</body>
+<script>
+    
+    
+            var map_aa850e919dfcf7ee8bbd2f1d16dc6186 = L.map(
+                "map_aa850e919dfcf7ee8bbd2f1d16dc6186",
+                {
+                    center: [-27.5, 152.8],
+                    crs: L.CRS.EPSG3857,
+                    ...{
+  "zoom": 9,
+  "zoomControl": true,
+  "preferCanvas": false,
+}
+
+                }
+            );
+
+            
+
+        
+    
+            var tile_layer_64af54b30a42cd1c0ca57cfe73821ab5 = L.tileLayer(
+                "https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png",
+                {
+  "minZoom": 0,
+  "maxZoom": 20,
+  "maxNativeZoom": 20,
+  "noWrap": false,
+  "attribution": "\u0026copy; \u003ca href=\"https://www.openstreetmap.org/copyright\"\u003eOpenStreetMap\u003c/a\u003e contributors \u0026copy; \u003ca href=\"https://carto.com/attributions\"\u003eCARTO\u003c/a\u003e",
+  "subdomains": "abcd",
+  "detectRetina": false,
+  "tms": false,
+  "opacity": 1,
+}
+
+            );
+        
+    
+            tile_layer_64af54b30a42cd1c0ca57cfe73821ab5.addTo(map_aa850e919dfcf7ee8bbd2f1d16dc6186);
+        
+    
+            var circle_marker_e774a1780cdb1851741aca3f291d9bd9 = L.circleMarker(
+                [-27.79, 152.96],
+                {"bubblingMouseEvents": true, "color": "#d32f2f", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d32f2f", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 20.0, "stroke": true, "weight": 3}
+            ).addTo(map_aa850e919dfcf7ee8bbd2f1d16dc6186);
+        
+    
+        var popup_49b74f153f1d038e4e5741b6ed56de19 = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_d9129ef66636b981798885f44a059ee2 = $(`<div id="html_d9129ef66636b981798885f44a059ee2" style="width: 100.0%; height: 100.0%;"><b>Flagstone (West) - New Beith</b><br>Pressure Score: 100.0/100<br>Pop Growth: 7.0%<br>Dwellings 2023-24: 1468</div>`)[0];
+                popup_49b74f153f1d038e4e5741b6ed56de19.setContent(html_d9129ef66636b981798885f44a059ee2);
+            
+        
+
+        circle_marker_e774a1780cdb1851741aca3f291d9bd9.bindPopup(popup_49b74f153f1d038e4e5741b6ed56de19)
+        ;
+
+        
+    
+    
+            circle_marker_e774a1780cdb1851741aca3f291d9bd9.bindTooltip(
+                `<div>
+                     Flagstone (West) - New Beith: 100.0/100
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_871a0767d66beecf7fa1828d6fdbc1ee = L.circleMarker(
+                [-27.99, 152.86],
+                {"bubblingMouseEvents": true, "color": "#d32f2f", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d32f2f", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 20.0, "stroke": true, "weight": 3}
+            ).addTo(map_aa850e919dfcf7ee8bbd2f1d16dc6186);
+        
+    
+        var popup_9bd35b3ce311d007afe4ef7dab29bad2 = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_14b914cf1c08e3f5e745898893316f15 = $(`<div id="html_14b914cf1c08e3f5e745898893316f15" style="width: 100.0%; height: 100.0%;"><b>Beaudesert</b><br>Pressure Score: 100.0/100<br>Pop Growth: 2.8%<br>Dwellings 2023-24: 1604</div>`)[0];
+                popup_9bd35b3ce311d007afe4ef7dab29bad2.setContent(html_14b914cf1c08e3f5e745898893316f15);
+            
+        
+
+        circle_marker_871a0767d66beecf7fa1828d6fdbc1ee.bindPopup(popup_9bd35b3ce311d007afe4ef7dab29bad2)
+        ;
+
+        
+    
+    
+            circle_marker_871a0767d66beecf7fa1828d6fdbc1ee.bindTooltip(
+                `<div>
+                     Beaudesert: 100.0/100
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_19046107189cc6b85092e5bf035c21c5 = L.circleMarker(
+                [-26.8, 153.13],
+                {"bubblingMouseEvents": true, "color": "#d32f2f", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d32f2f", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 19.988, "stroke": true, "weight": 3}
+            ).addTo(map_aa850e919dfcf7ee8bbd2f1d16dc6186);
+        
+    
+        var popup_9892d19e3aaf01267e2e831aeeb3de83 = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_837f5febac988c027656add6fac866f6 = $(`<div id="html_837f5febac988c027656add6fac866f6" style="width: 100.0%; height: 100.0%;"><b>Golden Beach - Pelican Waters</b><br>Pressure Score: 99.9/100<br>Pop Growth: 2.5%<br>Dwellings 2023-24: 808</div>`)[0];
+                popup_9892d19e3aaf01267e2e831aeeb3de83.setContent(html_837f5febac988c027656add6fac866f6);
+            
+        
+
+        circle_marker_19046107189cc6b85092e5bf035c21c5.bindPopup(popup_9892d19e3aaf01267e2e831aeeb3de83)
+        ;
+
+        
+    
+    
+            circle_marker_19046107189cc6b85092e5bf035c21c5.bindTooltip(
+                `<div>
+                     Golden Beach - Pelican Waters: 99.9/100
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_3aa2d6c05401571c972c71ad186019bd = L.circleMarker(
+                [-28.1, 153.46],
+                {"bubblingMouseEvents": true, "color": "#d32f2f", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d32f2f", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 19.988, "stroke": true, "weight": 3}
+            ).addTo(map_aa850e919dfcf7ee8bbd2f1d16dc6186);
+        
+    
+        var popup_5bde4753a9222efcd291b98d33efc156 = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_e1a885bbc2bd10dc5e266279d92e6153 = $(`<div id="html_e1a885bbc2bd10dc5e266279d92e6153" style="width: 100.0%; height: 100.0%;"><b>Palm Beach</b><br>Pressure Score: 99.9/100<br>Pop Growth: 3.9%<br>Dwellings 2023-24: 2176</div>`)[0];
+                popup_5bde4753a9222efcd291b98d33efc156.setContent(html_e1a885bbc2bd10dc5e266279d92e6153);
+            
+        
+
+        circle_marker_3aa2d6c05401571c972c71ad186019bd.bindPopup(popup_5bde4753a9222efcd291b98d33efc156)
+        ;
+
+        
+    
+    
+            circle_marker_3aa2d6c05401571c972c71ad186019bd.bindTooltip(
+                `<div>
+                     Palm Beach: 99.9/100
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_a481bb95c83959679757816d6c8a1aac = L.circleMarker(
+                [-27.79, 153.08],
+                {"bubblingMouseEvents": true, "color": "#d32f2f", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d32f2f", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 19.988, "stroke": true, "weight": 3}
+            ).addTo(map_aa850e919dfcf7ee8bbd2f1d16dc6186);
+        
+    
+        var popup_d50cc8b73c81d81edfda608b2e4e733f = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_82e67905ba80ec2d459e696db19312fe = $(`<div id="html_82e67905ba80ec2d459e696db19312fe" style="width: 100.0%; height: 100.0%;"><b>Yarrabilba</b><br>Pressure Score: 99.9/100<br>Pop Growth: 8.839999999999918%<br>Dwellings 2023-24: 2344</div>`)[0];
+                popup_d50cc8b73c81d81edfda608b2e4e733f.setContent(html_82e67905ba80ec2d459e696db19312fe);
+            
+        
+
+        circle_marker_a481bb95c83959679757816d6c8a1aac.bindPopup(popup_d50cc8b73c81d81edfda608b2e4e733f)
+        ;
+
+        
+    
+    
+            circle_marker_a481bb95c83959679757816d6c8a1aac.bindTooltip(
+                `<div>
+                     Yarrabilba: 99.9/100
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_b8dcf1690bef2a28f9c650c2e801dc61 = L.circleMarker(
+                [-27.73, 153.09],
+                {"bubblingMouseEvents": true, "color": "#d32f2f", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d32f2f", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 19.988, "stroke": true, "weight": 3}
+            ).addTo(map_aa850e919dfcf7ee8bbd2f1d16dc6186);
+        
+    
+        var popup_f099dd82ab1093df11ec6d0dbfbcef64 = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_603f800373d480c86a56882bdd0d764b = $(`<div id="html_603f800373d480c86a56882bdd0d764b" style="width: 100.0%; height: 100.0%;"><b>Chambers Flat - Logan Reserve</b><br>Pressure Score: 99.9/100<br>Pop Growth: 8.839999999999918%<br>Dwellings 2023-24: 2803</div>`)[0];
+                popup_f099dd82ab1093df11ec6d0dbfbcef64.setContent(html_603f800373d480c86a56882bdd0d764b);
+            
+        
+
+        circle_marker_b8dcf1690bef2a28f9c650c2e801dc61.bindPopup(popup_f099dd82ab1093df11ec6d0dbfbcef64)
+        ;
+
+        
+    
+    
+            circle_marker_b8dcf1690bef2a28f9c650c2e801dc61.bindTooltip(
+                `<div>
+                     Chambers Flat - Logan Reserve: 99.9/100
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_603f6c06835b214256c2e34aba3a9757 = L.circleMarker(
+                [-27.67, 152.82],
+                {"bubblingMouseEvents": true, "color": "#d32f2f", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d32f2f", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 19.988, "stroke": true, "weight": 3}
+            ).addTo(map_aa850e919dfcf7ee8bbd2f1d16dc6186);
+        
+    
+        var popup_780f19966989417db948c838c473d2fd = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_8f5e0053d8b98319749cf83a21e13337 = $(`<div id="html_8f5e0053d8b98319749cf83a21e13337" style="width: 100.0%; height: 100.0%;"><b>Ripley</b><br>Pressure Score: 99.9/100<br>Pop Growth: 8.839999999999918%<br>Dwellings 2023-24: 2803</div>`)[0];
+                popup_780f19966989417db948c838c473d2fd.setContent(html_8f5e0053d8b98319749cf83a21e13337);
+            
+        
+
+        circle_marker_603f6c06835b214256c2e34aba3a9757.bindPopup(popup_780f19966989417db948c838c473d2fd)
+        ;
+
+        
+    
+    
+            circle_marker_603f6c06835b214256c2e34aba3a9757.bindTooltip(
+                `<div>
+                     Ripley: 99.9/100
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_9ac0fbe48fef072744c346100f5f17e7 = L.circleMarker(
+                [-27.75, 153.02],
+                {"bubblingMouseEvents": true, "color": "#d32f2f", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d32f2f", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 19.988, "stroke": true, "weight": 3}
+            ).addTo(map_aa850e919dfcf7ee8bbd2f1d16dc6186);
+        
+    
+        var popup_de2ea82b6c07c9de7abf13eca2a0d787 = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_b1d2688f62a9b47854b03828a2d73377 = $(`<div id="html_b1d2688f62a9b47854b03828a2d73377" style="width: 100.0%; height: 100.0%;"><b>Greenbank - North Maclean</b><br>Pressure Score: 99.9/100<br>Pop Growth: 8.839999999999918%<br>Dwellings 2023-24: 2364</div>`)[0];
+                popup_de2ea82b6c07c9de7abf13eca2a0d787.setContent(html_b1d2688f62a9b47854b03828a2d73377);
+            
+        
+
+        circle_marker_9ac0fbe48fef072744c346100f5f17e7.bindPopup(popup_de2ea82b6c07c9de7abf13eca2a0d787)
+        ;
+
+        
+    
+    
+            circle_marker_9ac0fbe48fef072744c346100f5f17e7.bindTooltip(
+                `<div>
+                     Greenbank - North Maclean: 99.9/100
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_b63789642e12490958878d70b4f0d10d = L.circleMarker(
+                [-27.64, 152.59],
+                {"bubblingMouseEvents": true, "color": "#d32f2f", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d32f2f", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 19.988, "stroke": true, "weight": 3}
+            ).addTo(map_aa850e919dfcf7ee8bbd2f1d16dc6186);
+        
+    
+        var popup_8ad436aeff888c34fc9115892bedb4f7 = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_cef7145ee006d59353046b154f536e19 = $(`<div id="html_cef7145ee006d59353046b154f536e19" style="width: 100.0%; height: 100.0%;"><b>Rosewood</b><br>Pressure Score: 99.9/100<br>Pop Growth: 3.3%<br>Dwellings 2023-24: 1136</div>`)[0];
+                popup_8ad436aeff888c34fc9115892bedb4f7.setContent(html_cef7145ee006d59353046b154f536e19);
+            
+        
+
+        circle_marker_b63789642e12490958878d70b4f0d10d.bindPopup(popup_8ad436aeff888c34fc9115892bedb4f7)
+        ;
+
+        
+    
+    
+            circle_marker_b63789642e12490958878d70b4f0d10d.bindTooltip(
+                `<div>
+                     Rosewood: 99.9/100
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_49198e28738403084b645f01e9a774e8 = L.circleMarker(
+                [-25.28, 152.84],
+                {"bubblingMouseEvents": true, "color": "#d32f2f", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d32f2f", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 19.988, "stroke": true, "weight": 3}
+            ).addTo(map_aa850e919dfcf7ee8bbd2f1d16dc6186);
+        
+    
+        var popup_814e58557ba45d65cbaa11842f8288be = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_7179fcacdebe79ba703c35f8330702fb = $(`<div id="html_7179fcacdebe79ba703c35f8330702fb" style="width: 100.0%; height: 100.0%;"><b>Pialba - Eli Waters</b><br>Pressure Score: 99.9/100<br>Pop Growth: 3.4%<br>Dwellings 2023-24: 956</div>`)[0];
+                popup_814e58557ba45d65cbaa11842f8288be.setContent(html_7179fcacdebe79ba703c35f8330702fb);
+            
+        
+
+        circle_marker_49198e28738403084b645f01e9a774e8.bindPopup(popup_814e58557ba45d65cbaa11842f8288be)
+        ;
+
+        
+    
+    
+            circle_marker_49198e28738403084b645f01e9a774e8.bindTooltip(
+                `<div>
+                     Pialba - Eli Waters: 99.9/100
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_f22423b66b281b1346488a07c6d9aa5f = L.circleMarker(
+                [-27.83, 153.02],
+                {"bubblingMouseEvents": true, "color": "#d32f2f", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d32f2f", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 19.976, "stroke": true, "weight": 3}
+            ).addTo(map_aa850e919dfcf7ee8bbd2f1d16dc6186);
+        
+    
+        var popup_22629f533089401d9f61dbdebccf1fc3 = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_d43684767cd8a959a1dd9647305e12e6 = $(`<div id="html_d43684767cd8a959a1dd9647305e12e6" style="width: 100.0%; height: 100.0%;"><b>Jimboomba - Glenlogan</b><br>Pressure Score: 99.8/100<br>Pop Growth: 4.2%<br>Dwellings 2023-24: 956</div>`)[0];
+                popup_22629f533089401d9f61dbdebccf1fc3.setContent(html_d43684767cd8a959a1dd9647305e12e6);
+            
+        
+
+        circle_marker_f22423b66b281b1346488a07c6d9aa5f.bindPopup(popup_22629f533089401d9f61dbdebccf1fc3)
+        ;
+
+        
+    
+    
+            circle_marker_f22423b66b281b1346488a07c6d9aa5f.bindTooltip(
+                `<div>
+                     Jimboomba - Glenlogan: 99.8/100
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_2a1b4664b39bba8750d46dd0b84dbbfe = L.circleMarker(
+                [-26.8, 152.96],
+                {"bubblingMouseEvents": true, "color": "#d32f2f", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d32f2f", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 19.976, "stroke": true, "weight": 3}
+            ).addTo(map_aa850e919dfcf7ee8bbd2f1d16dc6186);
+        
+    
+        var popup_4d8cdfd10d7879564fd217b76d274393 = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_bfd7ac1dcb95b01cf1737ff9228e7de3 = $(`<div id="html_bfd7ac1dcb95b01cf1737ff9228e7de3" style="width: 100.0%; height: 100.0%;"><b>Landsborough</b><br>Pressure Score: 99.8/100<br>Pop Growth: 7.4%<br>Dwellings 2023-24: 1816</div>`)[0];
+                popup_4d8cdfd10d7879564fd217b76d274393.setContent(html_bfd7ac1dcb95b01cf1737ff9228e7de3);
+            
+        
+
+        circle_marker_2a1b4664b39bba8750d46dd0b84dbbfe.bindPopup(popup_4d8cdfd10d7879564fd217b76d274393)
+        ;
+
+        
+    
+    
+            circle_marker_2a1b4664b39bba8750d46dd0b84dbbfe.bindTooltip(
+                `<div>
+                     Landsborough: 99.8/100
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_3e0eb930839e77300a4bee3df20f6d24 = L.circleMarker(
+                [-26.2, 152.66],
+                {"bubblingMouseEvents": true, "color": "#d32f2f", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d32f2f", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 19.976, "stroke": true, "weight": 3}
+            ).addTo(map_aa850e919dfcf7ee8bbd2f1d16dc6186);
+        
+    
+        var popup_9191cef1e0a64a791c3cc8891c896db9 = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_f2f9c2f2dc5042b89f85beaab2a62a57 = $(`<div id="html_f2f9c2f2dc5042b89f85beaab2a62a57" style="width: 100.0%; height: 100.0%;"><b>Gympie - South</b><br>Pressure Score: 99.8/100<br>Pop Growth: 5.6%<br>Dwellings 2023-24: 1140</div>`)[0];
+                popup_9191cef1e0a64a791c3cc8891c896db9.setContent(html_f2f9c2f2dc5042b89f85beaab2a62a57);
+            
+        
+
+        circle_marker_3e0eb930839e77300a4bee3df20f6d24.bindPopup(popup_9191cef1e0a64a791c3cc8891c896db9)
+        ;
+
+        
+    
+    
+            circle_marker_3e0eb930839e77300a4bee3df20f6d24.bindTooltip(
+                `<div>
+                     Gympie - South: 99.8/100
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_de30983a6613516ecbab3a800a92f3cd = L.circleMarker(
+                [-27.62, 152.86],
+                {"bubblingMouseEvents": true, "color": "#d32f2f", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d32f2f", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 19.976, "stroke": true, "weight": 3}
+            ).addTo(map_aa850e919dfcf7ee8bbd2f1d16dc6186);
+        
+    
+        var popup_0dfa22ffc6acf664308b21d4b2c46772 = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_dcb095be443f0c18f58de1fc5aef3dcf = $(`<div id="html_dcb095be443f0c18f58de1fc5aef3dcf" style="width: 100.0%; height: 100.0%;"><b>Redbank Plains</b><br>Pressure Score: 99.8/100<br>Pop Growth: 3.7%<br>Dwellings 2023-24: 2188</div>`)[0];
+                popup_0dfa22ffc6acf664308b21d4b2c46772.setContent(html_dcb095be443f0c18f58de1fc5aef3dcf);
+            
+        
+
+        circle_marker_de30983a6613516ecbab3a800a92f3cd.bindPopup(popup_0dfa22ffc6acf664308b21d4b2c46772)
+        ;
+
+        
+    
+    
+            circle_marker_de30983a6613516ecbab3a800a92f3cd.bindTooltip(
+                `<div>
+                     Redbank Plains: 99.8/100
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+    
+            var circle_marker_8bdd6375781c9145588e7cca74bfbe9c = L.circleMarker(
+                [-27.81, 153.13],
+                {"bubblingMouseEvents": true, "color": "#d32f2f", "dashArray": null, "dashOffset": null, "fill": true, "fillColor": "#d32f2f", "fillOpacity": 0.8, "fillRule": "evenodd", "lineCap": "round", "lineJoin": "round", "opacity": 1.0, "radius": 19.976, "stroke": true, "weight": 3}
+            ).addTo(map_aa850e919dfcf7ee8bbd2f1d16dc6186);
+        
+    
+        var popup_536197475394c083a7c00e4b047cc5ce = L.popup({
+  "maxWidth": 200,
+});
+
+        
+            
+                var html_8f8521d279a28a063fcb5a0c50e5252a = $(`<div id="html_8f8521d279a28a063fcb5a0c50e5252a" style="width: 100.0%; height: 100.0%;"><b>Wolffdene - Bahrs Scrub</b><br>Pressure Score: 99.8/100<br>Pop Growth: 8.0%<br>Dwellings 2023-24: 900</div>`)[0];
+                popup_536197475394c083a7c00e4b047cc5ce.setContent(html_8f8521d279a28a063fcb5a0c50e5252a);
+            
+        
+
+        circle_marker_8bdd6375781c9145588e7cca74bfbe9c.bindPopup(popup_536197475394c083a7c00e4b047cc5ce)
+        ;
+
+        
+    
+    
+            circle_marker_8bdd6375781c9145588e7cca74bfbe9c.bindTooltip(
+                `<div>
+                     Wolffdene - Bahrs Scrub: 99.8/100
+                 </div>`,
+                {
+  "sticky": true,
+}
+            );
+        
+</script>
+</html>
