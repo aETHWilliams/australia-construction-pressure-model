@@ -1,7 +1,5 @@
 import streamlit as st
 import pandas as pd
-import folium
-from streamlit_folium import st_folium
 
 st.set_page_config(
     page_title="Australia Construction Pressure Index",
@@ -13,123 +11,24 @@ st.set_page_config(
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Sora:wght@400;600;700&display=swap');
-
-    html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
-        background-color: #f0f4f8;
-        color: #1a2332;
-    }
+    html, body, [class*="css"] { font-family: 'Inter', sans-serif; background-color: #f0f4f8; color: #1a2332; }
     .main { background-color: #f0f4f8; }
     .block-container { padding-top: 2rem; padding-bottom: 3rem; max-width: 1200px; }
-
-    .header-wrap {
-        background: linear-gradient(135deg, #1e3a5f 0%, #2563a8 60%, #3b82c4 100%);
-        border-radius: 16px;
-        padding: 2.5rem 3rem;
-        margin-bottom: 2rem;
-        box-shadow: 0 4px 24px rgba(37,99,168,0.18);
-    }
-    .header-title {
-        font-family: 'Sora', sans-serif;
-        font-size: 2.4rem;
-        font-weight: 700;
-        color: #ffffff;
-        letter-spacing: -0.5px;
-        line-height: 1.15;
-        margin-bottom: 0.4rem;
-    }
-    .header-sub {
-        font-size: 0.9rem;
-        color: #a8c8e8;
-        font-weight: 300;
-        letter-spacing: 0.8px;
-        text-transform: uppercase;
-    }
-    .metric-card {
-        background: #ffffff;
-        border: 1px solid #dbe8f5;
-        border-radius: 12px;
-        padding: 1.2rem 1rem;
-        text-align: center;
-        box-shadow: 0 2px 8px rgba(37,99,168,0.07);
-    }
-    .metric-value {
-        font-family: 'Sora', sans-serif;
-        font-size: 1.8rem;
-        font-weight: 700;
-        color: #2563a8;
-        display: block;
-    }
-    .metric-label {
-        font-size: 0.7rem;
-        color: #6b8cae;
-        text-transform: uppercase;
-        letter-spacing: 1px;
-        margin-top: 0.2rem;
-    }
-    .section-title {
-        font-family: 'Sora', sans-serif;
-        font-size: 1.2rem;
-        font-weight: 600;
-        color: #1e3a5f;
-        border-bottom: 2px solid #dbe8f5;
-        padding-bottom: 0.5rem;
-        margin-bottom: 1.2rem;
-        margin-top: 2rem;
-    }
-    .suburb-row {
-        background: #ffffff;
-        border: 1px solid #dbe8f5;
-        border-radius: 10px;
-        padding: 0.9rem 1.2rem;
-        margin-bottom: 0.5rem;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        box-shadow: 0 1px 4px rgba(37,99,168,0.05);
-    }
+    .header-wrap { background: linear-gradient(135deg, #1e3a5f 0%, #2563a8 60%, #3b82c4 100%); border-radius: 16px; padding: 2.5rem 3rem; margin-bottom: 2rem; box-shadow: 0 4px 24px rgba(37,99,168,0.18); }
+    .header-title { font-family: 'Sora', sans-serif; font-size: 2.4rem; font-weight: 700; color: #ffffff; letter-spacing: -0.5px; line-height: 1.15; margin-bottom: 0.4rem; }
+    .header-sub { font-size: 0.9rem; color: #a8c8e8; font-weight: 300; letter-spacing: 0.8px; text-transform: uppercase; }
+    .metric-card { background: #ffffff; border: 1px solid #dbe8f5; border-radius: 12px; padding: 1.2rem 1rem; text-align: center; box-shadow: 0 2px 8px rgba(37,99,168,0.07); }
+    .metric-value { font-family: 'Sora', sans-serif; font-size: 1.8rem; font-weight: 700; color: #2563a8; display: block; }
+    .metric-label { font-size: 0.7rem; color: #6b8cae; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.2rem; }
+    .section-title { font-family: 'Sora', sans-serif; font-size: 1.2rem; font-weight: 600; color: #1e3a5f; border-bottom: 2px solid #dbe8f5; padding-bottom: 0.5rem; margin-bottom: 1.2rem; margin-top: 2rem; }
+    .suburb-row { background: #ffffff; border: 1px solid #dbe8f5; border-radius: 10px; padding: 0.9rem 1.2rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 4px rgba(37,99,168,0.05); }
     .score-high { color: #dc2626; font-weight: 600; }
     .score-med  { color: #d97706; font-weight: 600; }
     .score-low  { color: #2563a8; font-weight: 600; }
-    div[data-testid="stSidebar"] {
-        background-color: #ffffff;
-        border-right: 1px solid #dbe8f5;
-    }
-    .stDataFrame {
-        border: 1px solid #dbe8f5;
-        border-radius: 10px;
-        box-shadow: 0 2px 8px rgba(37,99,168,0.05);
-    }
-    .about-box {
-        background: #ffffff;
-        border: 1px solid #dbe8f5;
-        border-left: 4px solid #2563a8;
-        border-radius: 10px;
-        padding: 1.5rem;
-        font-size: 0.88rem;
-        color: #4a6080;
-        line-height: 1.9;
-        box-shadow: 0 2px 8px rgba(37,99,168,0.05);
-    }
-    .stTextInput input {
-        background: #ffffff !important;
-        border: 1px solid #dbe8f5 !important;
-        color: #1a2332 !important;
-        border-radius: 8px !important;
-        box-shadow: 0 1px 4px rgba(37,99,168,0.07) !important;
-    }
-    hr { border-color: #dbe8f5; }
-    .tag {
-        display: inline-block;
-        background: #e8f0fb;
-        color: #2563a8;
-        font-size: 0.72rem;
-        font-weight: 500;
-        padding: 0.2rem 0.6rem;
-        border-radius: 20px;
-        margin-right: 0.3rem;
-        letter-spacing: 0.3px;
-    }
+    div[data-testid="stSidebar"] { background-color: #ffffff; border-right: 1px solid #dbe8f5; }
+    .about-box { background: #ffffff; border: 1px solid #dbe8f5; border-left: 4px solid #2563a8; border-radius: 10px; padding: 1.5rem; font-size: 0.88rem; color: #4a6080; line-height: 1.9; box-shadow: 0 2px 8px rgba(37,99,168,0.05); }
+    .stTextInput input { background: #ffffff !important; border: 1px solid #dbe8f5 !important; color: #1a2332 !important; border-radius: 8px !important; }
+    .tag { display: inline-block; background: #e8f0fb; color: #2563a8; font-size: 0.72rem; font-weight: 500; padding: 0.2rem 0.6rem; border-radius: 20px; margin-right: 0.3rem; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -167,8 +66,8 @@ for col, (val, label) in zip([c1, c2, c3, c4, c5], metrics):
 
 # Sidebar
 st.sidebar.markdown("""
-<div style='font-family:Sora,sans-serif;font-size:1.1rem;font-weight:600;
-color:#1e3a5f;padding:0.5rem 0 1rem'>Filters</div>""", unsafe_allow_html=True)
+<div style='font-family:Sora,sans-serif;font-size:1.1rem;font-weight:600;color:#1e3a5f;padding:0.5rem 0 1rem'>Filters</div>
+""", unsafe_allow_html=True)
 
 states = ["All"] + sorted(results["state"].unique().tolist())
 selected = st.sidebar.selectbox("State", states)
@@ -217,46 +116,17 @@ if search:
                 </div>
             </div>""", unsafe_allow_html=True)
     else:
-        st.markdown(
-            "<span style='color:#6b8cae'>No suburb found. Try a different name.</span>",
-            unsafe_allow_html=True
-        )
+        st.markdown("<span style='color:#6b8cae'>No suburb found. Try a different name.</span>", unsafe_allow_html=True)
 
-# Map
+# Map — using st.map (lightweight, no folium)
 st.markdown('<div class="section-title">Pressure Map</div>', unsafe_allow_html=True)
 st.markdown(
-    "<span style='font-size:0.82rem;color:#6b8cae'>"
-    "Top 500 highest-pressure suburbs. Click any marker for details. Red = highest pressure.</span>",
+    "<span style='font-size:0.82rem;color:#6b8cae'>Top 500 highest-pressure suburbs shown.</span>",
     unsafe_allow_html=True
 )
 
 map_data = results.dropna(subset=['lat', 'lon']).sort_values('pressure_score', ascending=False).head(500)
-
-m = folium.Map(location=[-27.0, 134.0], zoom_start=4, tiles='CartoDB positron')
-
-for _, row in map_data.iterrows():
-    score = row['pressure_score']
-    colour = '#dc2626' if score >= 99 else '#d97706' if score >= 90 else '#2563a8'
-    radius = 7 + (score / 100) * 10
-    folium.CircleMarker(
-        location=[row['lat'], row['lon']],
-        radius=radius,
-        color=colour,
-        fill=True,
-        fill_color=colour,
-        fill_opacity=0.75,
-        popup=folium.Popup(
-            f"<b style='color:#1e3a5f'>{row['sa2_name']}</b> ({row['state']})<br>"
-            f"<b>Pressure Score:</b> {score}/100<br>"
-            f"<b>Pop Growth:</b> {row['erp_change_pct']}%<br>"
-            f"<b>Growth Years:</b> {int(row['years_of_growth'])}/22<br>"
-            f"<b>20yr Growth:</b> {round(row['growth_20yr']*100,1)}%",
-            max_width=220
-        ),
-        tooltip=f"{row['sa2_name']} - {score}/100"
-    ).add_to(m)
-
-st_folium(m, width=None, height=480, returned_objects=[])
+st.map(map_data[['lat', 'lon']], zoom=3)
 
 # Table
 st.markdown(
@@ -279,13 +149,10 @@ display.columns = [
 ]
 display["20yr Growth"] = (display["20yr Growth"] * 100).round(1).astype(str) + "%"
 display["Pressure Score"] = display["Pressure Score"].round(1)
-st.dataframe(display, width='stretch', height=480, hide_index=True)
+st.dataframe(display, use_container_width=True, height=480, hide_index=True)
 
 # State chart
-st.markdown(
-    '<div class="section-title">High Pressure Suburbs by State</div>',
-    unsafe_allow_html=True
-)
+st.markdown('<div class="section-title">High Pressure Suburbs by State</div>', unsafe_allow_html=True)
 state_counts = (
     results[results["pressure_score"] >= 75]
     .groupby("state").size()
