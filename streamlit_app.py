@@ -178,7 +178,6 @@ st.markdown(
     "<span style='font-size:0.82rem;color:#6b8cae'>Top 500 highest-pressure suburbs shown.</span>",
     unsafe_allow_html=True
 )
-)
 
 map_data = results.dropna(subset=['lat', 'lon']).sort_values('pressure_score', ascending=False).head(500)
 st.map(map_data[['lat', 'lon']], latitude=-27.0, longitude=134.0, zoom=3)
