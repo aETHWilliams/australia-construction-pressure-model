@@ -13,7 +13,6 @@ st.set_page_config(
 st.markdown("""
 <style>
     @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap');
-
     html, body, [class*="css"] {
         font-family: 'DM Sans', sans-serif;
         background-color: #0f1117;
@@ -21,7 +20,6 @@ st.markdown("""
     }
     .main { background-color: #0f1117; }
     .block-container { padding-top: 2rem; padding-bottom: 2rem; }
-
     .header-title {
         font-family: 'DM Serif Display', serif;
         font-size: 3rem;
@@ -67,9 +65,9 @@ st.markdown("""
         margin-bottom: 1.2rem;
         margin-top: 2rem;
     }
-    .score-high   { color: #e05c5c; font-weight: 500; }
-    .score-med    { color: #e08c3a; font-weight: 500; }
-    .score-low    { color: #c8a96e; font-weight: 500; }
+    .score-high { color: #e05c5c; font-weight: 500; }
+    .score-med  { color: #e08c3a; font-weight: 500; }
+    .score-low  { color: #c8a96e; font-weight: 500; }
     .suburb-row {
         background: #1a1d27;
         border: 1px solid #2a2d3a;
@@ -84,8 +82,6 @@ st.markdown("""
         background-color: #13161f;
         border-right: 1px solid #2a2d3a;
     }
-    div[data-testid="stSidebar"] .css-1d391kg { padding-top: 2rem; }
-    .stSelectbox label, .stSlider label { color: #8a8a9a !important; font-size: 0.8rem !important; text-transform: uppercase; letter-spacing: 0.5px; }
     .stDataFrame { border: 1px solid #2a2d3a; border-radius: 8px; }
     hr { border-color: #2a2d3a; }
     .about-box {
@@ -107,38 +103,48 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+
 @st.cache_data
 def load_data():
-    df = pd.read_csv("aus_pressure_scores_v4.csv")
-    return df
+    return pd.read_csv("aus_pressure_scores_v4.csv")
+
 
 results = load_data()
 
-# Approximate suburb coordinates for mapping
 COORDS = {
-    'Ripley': (-27.67, 152.82), 'Yarrabilba': (-27.79, 153.08),
+    'Ripley': (-27.67, 152.82),
+    'Yarrabilba': (-27.79, 153.08),
     'Chambers Flat - Logan Reserve': (-27.73, 153.09),
     'Greenbank - North Maclean': (-27.75, 153.02),
     'Flagstone (West) - New Beith': (-27.79, 152.96),
-    'Beaudesert': (-27.99, 152.86), 'Redbank Plains': (-27.62, 152.86),
-    'Palm Beach': (-28.10, 153.46), 'Jimboomba - Glenlogan': (-27.83, 153.02),
+    'Beaudesert': (-27.99, 152.86),
+    'Redbank Plains': (-27.62, 152.86),
+    'Palm Beach': (-28.10, 153.46),
+    'Jimboomba - Glenlogan': (-27.83, 153.02),
     'Boronia Heights - Park Ridge': (-27.69, 153.02),
     'Caboolture - South': (-27.09, 152.95),
-    'Beechboro': (-31.85, 115.93), 'Byford': (-32.22, 116.02),
-    'Baldivis - North': (-32.32, 115.83), 'Baldivis - South': (-32.38, 115.83),
-    'The Vines': (-31.72, 115.97), 'Mandurah - North': (-32.51, 115.73),
+    'Beechboro': (-31.85, 115.93),
+    'Byford': (-32.22, 116.02),
+    'Baldivis - North': (-32.32, 115.83),
+    'Baldivis - South': (-32.38, 115.83),
+    'The Vines': (-31.72, 115.97),
+    'Mandurah - North': (-32.51, 115.73),
     'Casuarina - Wandi': (-32.19, 115.88),
     'Armadale - Wungong - Brookdale': (-32.15, 116.01),
     'Piara Waters - Forrestdale': (-32.12, 115.92),
     'Wellard (West) - Bertram': (-32.26, 115.84),
     'Beaconsfield - Officer': (-38.07, 145.46),
-    'Sunbury - South': (-37.59, 144.71), 'Sunbury': (-37.58, 144.73),
-    'Greenvale - Bulla': (-37.62, 144.89), 'Lara': (-38.02, 144.40),
+    'Sunbury - South': (-37.59, 144.71),
+    'Sunbury': (-37.58, 144.73),
+    'Greenvale - Bulla': (-37.62, 144.89),
+    'Lara': (-38.02, 144.40),
     'Mickleham - Yuroke': (-37.60, 144.90),
     'Pakenham - North West': (-38.06, 145.45),
     'Grovedale - Mount Duneed': (-38.22, 144.33),
-    'Koo Wee Rup': (-38.20, 145.49), 'Heidelberg West': (-37.76, 145.04),
-    'Mount Barker': (-35.07, 138.86), 'Victor Harbor': (-35.55, 138.62),
+    'Koo Wee Rup': (-38.20, 145.49),
+    'Heidelberg West': (-37.76, 145.04),
+    'Mount Barker': (-35.07, 138.86),
+    'Victor Harbor': (-35.55, 138.62),
     'Gawler - South': (-34.62, 138.74),
     'Virginia - Waterloo Corner': (-34.63, 138.57),
     'Albion Park - Macquarie Pass': (-34.57, 150.80),
@@ -151,11 +157,9 @@ COORDS = {
     'Albury - East': (-36.07, 146.94),
 }
 
-# ── Header ─────────────────────────────────────────────────
 st.markdown('<div class="header-title">Australia Construction<br>Pressure Index</div>', unsafe_allow_html=True)
 st.markdown('<div class="header-sub">Predictive ML Model — 7.3M Records — 2,442 Suburbs Nationally</div>', unsafe_allow_html=True)
 
-# ── Metrics ────────────────────────────────────────────────
 c1, c2, c3, c4, c5 = st.columns(5)
 metrics = [
     ("0.938", "Model AUC Score"),
@@ -164,17 +168,16 @@ metrics = [
     ("7.3M+", "Records Trained On"),
     ("5", "Data Sources"),
 ]
-for col, (val, label) in zip([c1,c2,c3,c4,c5], metrics):
+for col, (val, label) in zip([c1, c2, c3, c4, c5], metrics):
     col.markdown(f"""
     <div class="metric-card">
         <span class="metric-value">{val}</span>
         <span class="metric-label">{label}</span>
     </div>""", unsafe_allow_html=True)
 
-# ── Sidebar ────────────────────────────────────────────────
 st.sidebar.markdown("### Filters")
-states    = ["All"] + sorted(results["state"].unique().tolist())
-selected  = st.sidebar.selectbox("State", states)
+states = ["All"] + sorted(results["state"].unique().tolist())
+selected = st.sidebar.selectbox("State", states)
 min_score = st.sidebar.slider("Minimum Pressure Score", 0, 100, 75)
 
 st.sidebar.markdown("---")
@@ -188,14 +191,12 @@ SEIFA Socioeconomic Index 2021<br>
 ABS Approvals 2025-26 FYTD
 </div>""", unsafe_allow_html=True)
 
-# Filter data
 filtered = results.copy()
 if selected != "All":
     filtered = filtered[filtered["state"] == selected]
 filtered = filtered[filtered["pressure_score"] >= min_score]
 filtered = filtered.sort_values("pressure_score", ascending=False)
 
-# ── Search ─────────────────────────────────────────────────
 st.markdown('<div class="section-title">Suburb Search</div>', unsafe_allow_html=True)
 search = st.text_input("", placeholder="Type any suburb name...")
 if search:
@@ -203,7 +204,7 @@ if search:
     if len(found) > 0:
         for _, row in found.iterrows():
             score = row["pressure_score"]
-            cls   = "score-high" if score >= 99 else "score-med" if score >= 90 else "score-low"
+            cls = "score-high" if score >= 99 else "score-med" if score >= 90 else "score-low"
             st.markdown(f"""
             <div class="suburb-row">
                 <div>
@@ -221,23 +222,18 @@ if search:
     else:
         st.markdown("<span style='color:#8a8a9a'>No suburb found.</span>", unsafe_allow_html=True)
 
-# ── Map ────────────────────────────────────────────────────
 st.markdown('<div class="section-title">Pressure Map</div>', unsafe_allow_html=True)
 
 map_data = results.merge(
-    pd.DataFrame([(k, v[0], v[1]) for k,v in COORDS.items()],
-                 columns=['sa2_name','lat','lon']),
+    pd.DataFrame([(k, v[0], v[1]) for k, v in COORDS.items()],
+                 columns=['sa2_name', 'lat', 'lon']),
     on='sa2_name', how='inner'
 )
 
-m = folium.Map(
-    location=[-27.0, 134.0],
-    zoom_start=4,
-    tiles='CartoDB dark_matter'
-)
+m = folium.Map(location=[-27.0, 134.0], zoom_start=4, tiles='CartoDB dark_matter')
 
 for _, row in map_data.iterrows():
-    score  = row['pressure_score']
+    score = row['pressure_score']
     colour = '#e05c5c' if score >= 99 else '#e08c3a' if score >= 90 else '#c8a96e'
     radius = 6 + (score / 100) * 10
     folium.CircleMarker(
@@ -254,37 +250,41 @@ for _, row in map_data.iterrows():
             f"20yr Growth: {round(row['growth_20yr']*100,1)}%",
             max_width=220
         ),
-        tooltip=f"{row['sa2_name']} — {score}/100"
+        tooltip=f"{row['sa2_name']} - {score}/100"
     ).add_to(m)
 
 st_folium(m, width=None, height=480, returned_objects=[])
 
-# ── Table ──────────────────────────────────────────────────
-st.markdown(f'<div class="section-title">Ranked Suburbs — {selected} &nbsp;<span style="font-family:DM Sans;font-size:0.9rem;color:#8a8a9a">({len(filtered):,} results)</span></div>', unsafe_allow_html=True)
+st.markdown(
+    f'<div class="section-title">Ranked Suburbs — {selected} '
+    f'<span style="font-family:DM Sans;font-size:0.9rem;color:#8a8a9a">'
+    f'({len(filtered):,} results)</span></div>',
+    unsafe_allow_html=True
+)
 
 display = filtered[[
-    "sa2_name","state","pressure_score",
-    "erp_change_pct","growth_20yr",
-    "years_of_growth","dwellings_2526_fytd"
+    "sa2_name", "state", "pressure_score",
+    "erp_change_pct", "growth_20yr",
+    "years_of_growth", "dwellings_2526_fytd"
 ]].copy()
 display.columns = [
-    "Suburb","State","Pressure Score",
-    "Pop Growth %","20yr Growth",
-    "Consecutive Growth Years","2025-26 Approvals FYTD"
+    "Suburb", "State", "Pressure Score",
+    "Pop Growth %", "20yr Growth",
+    "Consecutive Growth Years", "2025-26 Approvals FYTD"
 ]
 display["20yr Growth"] = (display["20yr Growth"] * 100).round(1).astype(str) + "%"
 display["Pressure Score"] = display["Pressure Score"].round(1)
 st.dataframe(display, use_container_width=True, height=480, hide_index=True)
 
-# ── State Chart ────────────────────────────────────────────
 st.markdown('<div class="section-title">Distribution by State</div>', unsafe_allow_html=True)
-state_counts = (results[results["pressure_score"] >= 75]
-                .groupby("state").size()
-                .reset_index(name="High Pressure Suburbs")
-                .sort_values("High Pressure Suburbs", ascending=False))
+state_counts = (
+    results[results["pressure_score"] >= 75]
+    .groupby("state").size()
+    .reset_index(name="High Pressure Suburbs")
+    .sort_values("High Pressure Suburbs", ascending=False)
+)
 st.bar_chart(state_counts.set_index("state"))
 
-# ── About ──────────────────────────────────────────────────
 st.markdown('<div class="section-title">About This Model</div>', unsafe_allow_html=True)
 st.markdown("""
 <div class="about-box">
@@ -301,11 +301,3 @@ correct — 100% hit rate vs 25% from random selection.<br><br>
 <b style='color:#c8a96e'>Built with</b>&nbsp; Python, scikit-learn, XGBoost, Streamlit
 </div>
 """, unsafe_allow_html=True)
-```
-
-Then update `requirements.txt` in GitHub to:
-```
-streamlit
-pandas
-folium
-streamlit-folium
