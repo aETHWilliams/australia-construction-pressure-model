@@ -196,7 +196,7 @@ filtered = filtered.sort_values("pressure_score", ascending=False)
 
 # Search
 st.markdown('<div class="section-title">Suburb Search</div>', unsafe_allow_html=True)
-search = st.text_input("", placeholder="Search any suburb — e.g. Ripley, Byford, Sunbury...")
+search = st.text_input("Suburb Search", label_visibility="collapsed", placeholder="Search any suburb — e.g. Ripley, Byford, Sunbury...")
 if search:
     found = results[results["sa2_name"].str.contains(search, case=False, na=False)]
     if len(found) > 0:
@@ -228,11 +228,13 @@ if search:
 st.markdown('<div class="section-title">Pressure Map</div>', unsafe_allow_html=True)
 st.markdown(
     "<span style='font-size:0.82rem;color:#6b8cae'>"
-    "Click any marker for suburb details. Red = highest pressure.</span>",
+    "Top 500 highest-pressure suburbs. Click any marker for details. Red = highest pressure.</span>",
     unsafe_allow_html=True
 )
 
+# Merge coords then take top 500 by pressure score for performance
 map_data = results.merge(coords_df.dropna(subset=['lat', 'lon']), on='sa2_name', how='inner')
+map_data = map_data.sort_values('pressure_score', ascending=False).head(500)
 
 m = folium.Map(location=[-27.0, 134.0], zoom_start=4, tiles='CartoDB positron')
 
@@ -281,7 +283,7 @@ display.columns = [
 ]
 display["20yr Growth"] = (display["20yr Growth"] * 100).round(1).astype(str) + "%"
 display["Pressure Score"] = display["Pressure Score"].round(1)
-st.dataframe(display, use_container_width=True, height=480, hide_index=True)
+st.dataframe(display, width='stretch', height=480, hide_index=True)
 
 # State chart
 st.markdown(
