@@ -126,7 +126,7 @@ st.markdown(
 )
 
 map_data = results.dropna(subset=['lat', 'lon']).sort_values('pressure_score', ascending=False).head(500)
-st.map(map_data[['lat', 'lon']], zoom=3)
+st.map(map_data[['lat', 'lon']], latitude=-27.0, longitude=134.0, zoom=3)
 
 # Table
 st.markdown(
