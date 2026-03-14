@@ -2,115 +2,145 @@ import streamlit as st
 import pandas as pd
 import folium
 from streamlit_folium import st_folium
-
+ 
 st.set_page_config(
     page_title="Australia Construction Pressure Index",
     page_icon="",
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
+ 
 st.markdown("""
 <style>
-    @import url('https://fonts.googleapis.com/css2?family=DM+Serif+Display&family=DM+Sans:wght@300;400;500&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Sora:wght@400;600;700&display=swap');
+ 
     html, body, [class*="css"] {
-        font-family: 'DM Sans', sans-serif;
-        background-color: #0f1117;
-        color: #e8e8e8;
+        font-family: 'Inter', sans-serif;
+        background-color: #f0f4f8;
+        color: #1a2332;
     }
-    .main { background-color: #0f1117; }
-    .block-container { padding-top: 2rem; padding-bottom: 2rem; }
+    .main { background-color: #f0f4f8; }
+    .block-container { padding-top: 2rem; padding-bottom: 3rem; max-width: 1200px; }
+ 
+    .header-wrap {
+        background: linear-gradient(135deg, #1e3a5f 0%, #2563a8 60%, #3b82c4 100%);
+        border-radius: 16px;
+        padding: 2.5rem 3rem;
+        margin-bottom: 2rem;
+        box-shadow: 0 4px 24px rgba(37,99,168,0.18);
+    }
     .header-title {
-        font-family: 'DM Serif Display', serif;
-        font-size: 3rem;
-        font-weight: 400;
+        font-family: 'Sora', sans-serif;
+        font-size: 2.4rem;
+        font-weight: 700;
         color: #ffffff;
         letter-spacing: -0.5px;
-        line-height: 1.1;
-        margin-bottom: 0.25rem;
+        line-height: 1.15;
+        margin-bottom: 0.4rem;
     }
     .header-sub {
-        font-size: 0.95rem;
-        color: #8a8a9a;
+        font-size: 0.9rem;
+        color: #a8c8e8;
         font-weight: 300;
-        letter-spacing: 0.5px;
+        letter-spacing: 0.8px;
         text-transform: uppercase;
-        margin-bottom: 2rem;
     }
     .metric-card {
-        background: #1a1d27;
-        border: 1px solid #2a2d3a;
-        border-radius: 8px;
-        padding: 1.2rem 1.5rem;
+        background: #ffffff;
+        border: 1px solid #dbe8f5;
+        border-radius: 12px;
+        padding: 1.2rem 1rem;
         text-align: center;
+        box-shadow: 0 2px 8px rgba(37,99,168,0.07);
     }
     .metric-value {
-        font-family: 'DM Serif Display', serif;
-        font-size: 2rem;
-        color: #c8a96e;
+        font-family: 'Sora', sans-serif;
+        font-size: 1.8rem;
+        font-weight: 700;
+        color: #2563a8;
         display: block;
     }
     .metric-label {
-        font-size: 0.75rem;
-        color: #8a8a9a;
+        font-size: 0.7rem;
+        color: #6b8cae;
         text-transform: uppercase;
         letter-spacing: 1px;
+        margin-top: 0.2rem;
     }
     .section-title {
-        font-family: 'DM Serif Display', serif;
-        font-size: 1.4rem;
-        color: #ffffff;
-        border-bottom: 1px solid #2a2d3a;
+        font-family: 'Sora', sans-serif;
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: #1e3a5f;
+        border-bottom: 2px solid #dbe8f5;
         padding-bottom: 0.5rem;
         margin-bottom: 1.2rem;
         margin-top: 2rem;
     }
-    .score-high { color: #e05c5c; font-weight: 500; }
-    .score-med  { color: #e08c3a; font-weight: 500; }
-    .score-low  { color: #c8a96e; font-weight: 500; }
     .suburb-row {
-        background: #1a1d27;
-        border: 1px solid #2a2d3a;
-        border-radius: 6px;
-        padding: 0.8rem 1rem;
-        margin-bottom: 0.4rem;
+        background: #ffffff;
+        border: 1px solid #dbe8f5;
+        border-radius: 10px;
+        padding: 0.9rem 1.2rem;
+        margin-bottom: 0.5rem;
         display: flex;
         justify-content: space-between;
         align-items: center;
+        box-shadow: 0 1px 4px rgba(37,99,168,0.05);
     }
+    .score-high { color: #dc2626; font-weight: 600; }
+    .score-med  { color: #d97706; font-weight: 600; }
+    .score-low  { color: #2563a8; font-weight: 600; }
     div[data-testid="stSidebar"] {
-        background-color: #13161f;
-        border-right: 1px solid #2a2d3a;
+        background-color: #ffffff;
+        border-right: 1px solid #dbe8f5;
     }
-    .stDataFrame { border: 1px solid #2a2d3a; border-radius: 8px; }
-    hr { border-color: #2a2d3a; }
+    .stDataFrame {
+        border: 1px solid #dbe8f5;
+        border-radius: 10px;
+        box-shadow: 0 2px 8px rgba(37,99,168,0.05);
+    }
     .about-box {
-        background: #1a1d27;
-        border: 1px solid #2a2d3a;
-        border-left: 3px solid #c8a96e;
-        border-radius: 8px;
+        background: #ffffff;
+        border: 1px solid #dbe8f5;
+        border-left: 4px solid #2563a8;
+        border-radius: 10px;
         padding: 1.5rem;
-        font-size: 0.85rem;
-        color: #8a8a9a;
-        line-height: 1.8;
+        font-size: 0.88rem;
+        color: #4a6080;
+        line-height: 1.9;
+        box-shadow: 0 2px 8px rgba(37,99,168,0.05);
     }
     .stTextInput input {
-        background: #1a1d27 !important;
-        border: 1px solid #2a2d3a !important;
-        color: #e8e8e8 !important;
-        border-radius: 6px !important;
+        background: #ffffff !important;
+        border: 1px solid #dbe8f5 !important;
+        color: #1a2332 !important;
+        border-radius: 8px !important;
+        box-shadow: 0 1px 4px rgba(37,99,168,0.07) !important;
+    }
+    hr { border-color: #dbe8f5; }
+    .tag {
+        display: inline-block;
+        background: #e8f0fb;
+        color: #2563a8;
+        font-size: 0.72rem;
+        font-weight: 500;
+        padding: 0.2rem 0.6rem;
+        border-radius: 20px;
+        margin-right: 0.3rem;
+        letter-spacing: 0.3px;
     }
 </style>
 """, unsafe_allow_html=True)
-
-
+ 
+ 
 @st.cache_data
 def load_data():
     return pd.read_csv("aus_pressure_scores_v4.csv")
-
-
+ 
+ 
 results = load_data()
-
+ 
 COORDS = {
     'Ripley': (-27.67, 152.82),
     'Yarrabilba': (-27.79, 153.08),
@@ -156,10 +186,16 @@ COORDS = {
     'Port Macquarie - West': (-31.44, 152.88),
     'Albury - East': (-36.07, 146.94),
 }
-
-st.markdown('<div class="header-title">Australia Construction<br>Pressure Index</div>', unsafe_allow_html=True)
-st.markdown('<div class="header-sub">Predictive ML Model — 7.3M Records — 2,442 Suburbs Nationally</div>', unsafe_allow_html=True)
-
+ 
+# Header
+st.markdown("""
+<div class="header-wrap">
+    <div class="header-title">Australia Construction Pressure Index</div>
+    <div class="header-sub">Predictive ML Model &nbsp;·&nbsp; 7.3M Records &nbsp;·&nbsp; 2,442 Suburbs Nationally</div>
+</div>
+""", unsafe_allow_html=True)
+ 
+# Metrics
 c1, c2, c3, c4, c5 = st.columns(5)
 metrics = [
     ("0.938", "Model AUC Score"),
@@ -174,31 +210,37 @@ for col, (val, label) in zip([c1, c2, c3, c4, c5], metrics):
         <span class="metric-value">{val}</span>
         <span class="metric-label">{label}</span>
     </div>""", unsafe_allow_html=True)
-
-st.sidebar.markdown("### Filters")
+ 
+# Sidebar
+st.sidebar.markdown("""
+<div style='font-family:Sora,sans-serif;font-size:1.1rem;font-weight:600;
+color:#1e3a5f;padding:0.5rem 0 1rem'>Filters</div>""", unsafe_allow_html=True)
+ 
 states = ["All"] + sorted(results["state"].unique().tolist())
 selected = st.sidebar.selectbox("State", states)
 min_score = st.sidebar.slider("Minimum Pressure Score", 0, 100, 75)
-
+ 
 st.sidebar.markdown("---")
 st.sidebar.markdown("""
-<div style='font-size:0.75rem; color:#8a8a9a; line-height:1.8'>
-<b style='color:#c8a96e'>Data Sources</b><br>
+<div style='font-size:0.78rem; color:#6b8cae; line-height:2'>
+<b style='color:#1e3a5f'>Data Sources</b><br>
 ABS Building Approvals 2022-26<br>
 ABS Regional Population 2023-24<br>
 ABS Population History 2001-2024<br>
 SEIFA Socioeconomic Index 2021<br>
 ABS Approvals 2025-26 FYTD
 </div>""", unsafe_allow_html=True)
-
+ 
+# Filter
 filtered = results.copy()
 if selected != "All":
     filtered = filtered[filtered["state"] == selected]
 filtered = filtered[filtered["pressure_score"] >= min_score]
 filtered = filtered.sort_values("pressure_score", ascending=False)
-
+ 
+# Search
 st.markdown('<div class="section-title">Suburb Search</div>', unsafe_allow_html=True)
-search = st.text_input("", placeholder="Type any suburb name...")
+search = st.text_input("", placeholder="Search any suburb — e.g. Ripley, Byford, Sunbury...")
 if search:
     found = results[results["sa2_name"].str.contains(search, case=False, na=False)]
     if len(found) > 0:
@@ -208,60 +250,73 @@ if search:
             st.markdown(f"""
             <div class="suburb-row">
                 <div>
-                    <b style='color:#ffffff'>{row['sa2_name']}</b>
-                    <span style='color:#8a8a9a; font-size:0.8rem'> — {row['state']}</span>
+                    <b style='color:#1e3a5f;font-size:1rem'>{row['sa2_name']}</b>
+                    <span style='color:#6b8cae; font-size:0.82rem'> &nbsp;{row['state']}</span>
                 </div>
                 <div style='text-align:right'>
-                    <span class='{cls}'>{score}/100</span>
-                    <span style='color:#8a8a9a; font-size:0.8rem; margin-left:1rem'>
-                        Pop growth {row['erp_change_pct']}% &nbsp;|&nbsp;
-                        {int(row['years_of_growth'])}/22 growth years
+                    <span class='{cls}' style='font-size:1.1rem'>{score}/100</span>
+                    <span style='color:#6b8cae; font-size:0.8rem; margin-left:1rem'>
+                        Pop growth {row['erp_change_pct']}%
+                        &nbsp;|&nbsp;
+                        {int(row['years_of_growth'])}/22 consecutive growth years
                     </span>
                 </div>
             </div>""", unsafe_allow_html=True)
     else:
-        st.markdown("<span style='color:#8a8a9a'>No suburb found.</span>", unsafe_allow_html=True)
-
+        st.markdown(
+            "<span style='color:#6b8cae'>No suburb found. Try a different name.</span>",
+            unsafe_allow_html=True
+        )
+ 
+# Map
 st.markdown('<div class="section-title">Pressure Map</div>', unsafe_allow_html=True)
-
+st.markdown(
+    "<span style='font-size:0.82rem;color:#6b8cae'>"
+    "Click any marker for suburb details. Red = highest pressure.</span>",
+    unsafe_allow_html=True
+)
+ 
 map_data = results.merge(
     pd.DataFrame([(k, v[0], v[1]) for k, v in COORDS.items()],
                  columns=['sa2_name', 'lat', 'lon']),
     on='sa2_name', how='inner'
 )
-
-m = folium.Map(location=[-27.0, 134.0], zoom_start=4, tiles='CartoDB dark_matter')
-
+ 
+m = folium.Map(location=[-27.0, 134.0], zoom_start=4, tiles='CartoDB positron')
+ 
 for _, row in map_data.iterrows():
     score = row['pressure_score']
-    colour = '#e05c5c' if score >= 99 else '#e08c3a' if score >= 90 else '#c8a96e'
-    radius = 6 + (score / 100) * 10
+    colour = '#dc2626' if score >= 99 else '#d97706' if score >= 90 else '#2563a8'
+    radius = 7 + (score / 100) * 10
     folium.CircleMarker(
         location=[row['lat'], row['lon']],
         radius=radius,
         color=colour,
         fill=True,
-        fill_opacity=0.85,
+        fill_color=colour,
+        fill_opacity=0.75,
         popup=folium.Popup(
-            f"<b>{row['sa2_name']}</b> ({row['state']})<br>"
-            f"Pressure Score: {score}/100<br>"
-            f"Pop Growth: {row['erp_change_pct']}%<br>"
-            f"Growth Years: {int(row['years_of_growth'])}/22<br>"
-            f"20yr Growth: {round(row['growth_20yr']*100,1)}%",
+            f"<b style='color:#1e3a5f'>{row['sa2_name']}</b> ({row['state']})<br>"
+            f"<b>Pressure Score:</b> {score}/100<br>"
+            f"<b>Pop Growth:</b> {row['erp_change_pct']}%<br>"
+            f"<b>Growth Years:</b> {int(row['years_of_growth'])}/22<br>"
+            f"<b>20yr Growth:</b> {round(row['growth_20yr']*100,1)}%",
             max_width=220
         ),
         tooltip=f"{row['sa2_name']} - {score}/100"
     ).add_to(m)
-
+ 
 st_folium(m, width=None, height=480, returned_objects=[])
-
+ 
+# Table
 st.markdown(
-    f'<div class="section-title">Ranked Suburbs — {selected} '
-    f'<span style="font-family:DM Sans;font-size:0.9rem;color:#8a8a9a">'
-    f'({len(filtered):,} results)</span></div>',
+    f'<div class="section-title">Ranked Suburbs'
+    f'<span style="font-family:Inter;font-size:0.88rem;color:#6b8cae;font-weight:400">'
+    f' &nbsp;·&nbsp; {selected} &nbsp;·&nbsp; Score >= {min_score}'
+    f' &nbsp;·&nbsp; {len(filtered):,} results</span></div>',
     unsafe_allow_html=True
 )
-
+ 
 display = filtered[[
     "sa2_name", "state", "pressure_score",
     "erp_change_pct", "growth_20yr",
@@ -275,8 +330,12 @@ display.columns = [
 display["20yr Growth"] = (display["20yr Growth"] * 100).round(1).astype(str) + "%"
 display["Pressure Score"] = display["Pressure Score"].round(1)
 st.dataframe(display, use_container_width=True, height=480, hide_index=True)
-
-st.markdown('<div class="section-title">Distribution by State</div>', unsafe_allow_html=True)
+ 
+# State chart
+st.markdown(
+    '<div class="section-title">High Pressure Suburbs by State</div>',
+    unsafe_allow_html=True
+)
 state_counts = (
     results[results["pressure_score"] >= 75]
     .groupby("state").size()
@@ -284,20 +343,24 @@ state_counts = (
     .sort_values("High Pressure Suburbs", ascending=False)
 )
 st.bar_chart(state_counts.set_index("state"))
-
+ 
+# About
 st.markdown('<div class="section-title">About This Model</div>', unsafe_allow_html=True)
 st.markdown("""
 <div class="about-box">
-<b style='color:#c8a96e'>Methodology</b><br>
-Trained on 2022-23 and 2023-24 data to predict 2024-25 construction surges.
-Features include population growth rates, 20-year momentum, building approval
-history, socioeconomic indices, and 2025-26 forward signals.<br><br>
-<b style='color:#c8a96e'>Validation</b><br>
-Backtested against actual 2024-25 ABS data. Top 20 predictions confirmed
-correct — 100% hit rate vs 25% from random selection.<br><br>
-<b style='color:#c8a96e'>Models</b>&nbsp; XGBoost + Random Forest &nbsp;|&nbsp;
-<b style='color:#c8a96e'>AUC</b>&nbsp; 0.938 &nbsp;|&nbsp;
-<b style='color:#c8a96e'>Features</b>&nbsp; 20 &nbsp;|&nbsp;
-<b style='color:#c8a96e'>Built with</b>&nbsp; Python, scikit-learn, XGBoost, Streamlit
+<b style='color:#1e3a5f'>Methodology</b><br>
+Trained on 2022-23 and 2023-24 historical data to predict 2024-25 construction surges.
+Features include population growth rates, 20-year momentum, building approval history,
+socioeconomic indices (SEIFA), and 2025-26 forward approval signals.<br><br>
+<b style='color:#1e3a5f'>Validation</b><br>
+Backtested against actual 2024-25 ABS data. Top 20 predictions all confirmed correct —
+100% hit rate compared to 25% from random selection.<br><br>
+<span class="tag">XGBoost</span>
+<span class="tag">Random Forest</span>
+<span class="tag">AUC 0.938</span>
+<span class="tag">20 Features</span>
+<span class="tag">scikit-learn</span>
+<span class="tag">Streamlit</span>
+<span class="tag">Python</span>
 </div>
 """, unsafe_allow_html=True)
