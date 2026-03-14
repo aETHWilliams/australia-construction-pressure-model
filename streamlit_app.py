@@ -150,9 +150,34 @@ if search:
 
 # Map
 st.markdown('<div class="section-title">Pressure Map</div>', unsafe_allow_html=True)
+
+k1, k2, k3 = st.columns(3)
+k1.markdown("""
+<div style='background:#fff1f1;border:1px solid #fca5a5;border-left:4px solid #dc2626;border-radius:8px;padding:0.8rem 1rem'>
+<span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>Score 99–100</span><br>
+<span style='font-size:1rem;font-weight:700;color:#dc2626'>🔴 Critical Pressure</span><br>
+<span style='font-size:0.78rem;color:#4a6080'>Top 25% of construction activity highly likely. Act now.</span>
+</div>""", unsafe_allow_html=True)
+
+k2.markdown("""
+<div style='background:#fffbeb;border:1px solid #fcd34d;border-left:4px solid #d97706;border-radius:8px;padding:0.8rem 1rem'>
+<span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>Score 90–98</span><br>
+<span style='font-size:1rem;font-weight:700;color:#d97706'>🟡 High Pressure</span><br>
+<span style='font-size:0.78rem;color:#4a6080'>Strong signals of upcoming surge. Worth monitoring closely.</span>
+</div>""", unsafe_allow_html=True)
+
+k3.markdown("""
+<div style='background:#eff6ff;border:1px solid #93c5fd;border-left:4px solid #2563a8;border-radius:8px;padding:0.8rem 1rem'>
+<span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>Score below 90</span><br>
+<span style='font-size:1rem;font-weight:700;color:#2563a8'>🔵 Moderate / Low</span><br>
+<span style='font-size:0.78rem;color:#4a6080'>Some growth signals present but surge less likely near-term.</span>
+</div>""", unsafe_allow_html=True)
+
+st.markdown("<br>", unsafe_allow_html=True)
 st.markdown(
-    "<span style='font-size:0.82rem;color:#6b8cae'>Top 500 highest-pressure suburbs. Larger dots = higher pressure score.</span>",
+    "<span style='font-size:0.82rem;color:#6b8cae'>Top 500 highest-pressure suburbs shown.</span>",
     unsafe_allow_html=True
+)
 )
 
 map_data = results.dropna(subset=['lat', 'lon']).sort_values('pressure_score', ascending=False).head(500)
