@@ -89,17 +89,17 @@ st.sidebar.markdown("---")
 st.sidebar.markdown("""
 <div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>What This App Does</div>
 <div style='font-size:0.78rem; color:#4a6080; line-height:1.8; margin-bottom:1.2rem'>
-This tool predicts which Australian suburbs are likely to experience a construction boom <b>before it happens</b>. 
-It analyses 20 signals per suburb — population growth, building approval history, socioeconomic data, and forward-looking 2025-26 approvals — 
+This tool predicts which Australian suburbs are likely to experience a construction boom <b>before it happens</b>.
+It analyses 20 signals per suburb — population growth, building approval history, socioeconomic data, and forward-looking 2025-26 approvals —
 and assigns every suburb a <b>Pressure Score from 0 to 100</b>.<br><br>
 A score near 100 means the model is highly confident that suburb will be in the top tier of construction activity nationally.
 </div>
 
 <div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>How the Model Works</div>
 <div style='font-size:0.78rem; color:#4a6080; line-height:1.8; margin-bottom:1.2rem'>
-Two machine learning models — <b>XGBoost</b> and <b>Random Forest</b> — were trained on 2022–24 historical data and asked to predict which suburbs would surge in 2024–25. 
+Two machine learning models — <b>XGBoost</b> and <b>Random Forest</b> — were trained on 2022–24 historical data and asked to predict which suburbs would surge in 2024–25.
 The actual ABS results were then checked against the predictions.<br><br>
-Both models achieved an <b>AUC of 0.938</b> — meaning they correctly ranked high-growth suburbs over low-growth ones 94% of the time. 
+Both models achieved an <b>AUC of 0.938</b> — meaning they correctly ranked high-growth suburbs over low-growth ones 94% of the time.
 The top 20 predictions were all confirmed correct — a <b>100% hit rate</b> vs 25% from random selection.<br><br>
 <b>Training & Validation</b><br>
 To prevent data leakage, the model was trained exclusively on 2022–23 and 2023–24 data.
@@ -184,7 +184,6 @@ if search:
 # Map
 st.markdown('<div class="section-title">Pressure Map</div>', unsafe_allow_html=True)
 
-# Legend
 st.markdown("""
 <div class="legend-wrap">
     <div class="legend-item legend-item-red">
@@ -272,6 +271,7 @@ display.columns = [
 ]
 display["20yr Growth"] = (display["20yr Growth"] * 100).round(1).astype(str) + "%"
 display["Pressure Score"] = display["Pressure Score"].round(1)
+display["2025-26 Approvals FYTD"] = display["2025-26 Approvals FYTD"].apply(lambda x: int(x) if pd.notna(x) else "N/A")
 st.dataframe(display, use_container_width=True, height=480, hide_index=True)
 
 # State chart
