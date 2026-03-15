@@ -46,6 +46,8 @@ def load_data():
     return scores, shap_df, geojson
 
 results, shap_df, geojson = load_data()
+results['erp_change_pct'] = results['erp_change_pct'].round(1)
+results['dwellings_2526_fytd'] = results['dwellings_2526_fytd'].fillna(0).astype(int)
 
 def rank_to_color(rank):
     if rank <= 50:
