@@ -136,16 +136,49 @@ filtered = filtered.sort_values("pressure_score", ascending=False)
 top10 = results.sort_values('pressure_score', ascending=False).head(10).reset_index(drop=True)
 
 st.markdown("""
-<div style='background: linear-gradient(135deg, #1e3a5f 0%, #2563a8 60%, #3b82c4 100%);
-border-radius: 16px; padding: 2rem 2.5rem; margin-bottom: 2rem;
-box-shadow: 0 4px 24px rgba(37,99,168,0.18);'>
-<div style='font-family:Sora,sans-serif;font-size:1.3rem;font-weight:700;color:#ffffff;margin-bottom:0.3rem'>
+<div style='background:linear-gradient(135deg,#1e3a5f 0%,#2563a8 60%,#3b82c4 100%);
+border-radius:16px;padding:1.8rem 2rem;margin-bottom:2rem;
+box-shadow:0 4px 24px rgba(37,99,168,0.18);'>
+<div style='font-family:Sora,sans-serif;font-size:1.2rem;font-weight:700;color:#ffffff;margin-bottom:0.2rem'>
 Top 10 Predicted Surge Suburbs — 2026/27
 </div>
-<div style='font-size:0.82rem;color:#a8c8e8;font-weight:300;letter-spacing:0.6px;margin-bottom:1.4rem'>
-Ranked by Construction Pressure Score &nbsp;·&nbsp; Based on 20 ML Features &nbsp;·&nbsp; Updated March 2026
+<div style='font-size:0.78rem;color:#a8c8e8;margin-bottom:1.2rem'>
+Ranked by Construction Pressure Score &nbsp;·&nbsp; Based on 20 ML Features
 </div>
+<table style='width:100%;border-collapse:collapse;'>
+<tr style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:0.5rem'>
+<td style='padding:0.4rem 0.6rem'>#</td>
+<td style='padding:0.4rem 0.6rem'>Suburb</td>
+<td style='padding:0.4rem 0.6rem'>State</td>
+<td style='padding:0.4rem 0.6rem'>Score</td>
+<td style='padding:0.4rem 0.6rem'>Pop Growth</td>
+<td style='padding:0.4rem 0.6rem'>Growth Yrs</td>
+<td style='padding:0.4rem 0.6rem'>Approvals FYTD</td>
+<td style='padding:0.4rem 0.6rem'>Signal</td>
+</tr>
 """, unsafe_allow_html=True)
+
+for i, row in top10.iterrows():
+    score = row['pressure_score']
+    rank = i + 1
+    color = '#f87171' if score >= 99 else '#fbbf24' if score >= 90 else '#93c5fd'
+    signal = '🔴 Critical' if score >= 99 else '🟡 High' if score >= 90 else '🔵 Moderate'
+    approvals = int(row['dwellings_2526_fytd']) if pd.notna(row['dwellings_2526_fytd']) else 'N/A'
+    bg = 'rgba(255,255,255,0.05)' if rank % 2 == 0 else 'transparent'
+    st.markdown(f"""
+    <tr style='font-size:0.82rem;background:{bg};'>
+        <td style='padding:0.5rem 0.6rem;color:rgba(255,255,255,0.35);font-weight:600'>{rank}</td>
+        <td style='padding:0.5rem 0.6rem;color:#ffffff;font-weight:600'>{row['sa2_name']}</td>
+        <td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{row['state']}</td>
+        <td style='padding:0.5rem 0.6rem;color:{color};font-weight:700'>{score}</td>
+        <td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{row['erp_change_pct']}%</td>
+        <td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{int(row['years_of_growth'])}/22</td>
+        <td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{approvals}</td>
+        <td style='padding:0.5rem 0.6rem;color:{color}'>{signal}</td>
+    </tr>
+    """, unsafe_allow_html=True)
+
+st.markdown("</table></div>", unsafe_allow_html=True)
 
 for i, row in top10.iterrows():
     score = row['pressure_score']
