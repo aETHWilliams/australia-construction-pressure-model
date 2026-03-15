@@ -12,38 +12,24 @@ st.set_page_config(
 )
 
 st.markdown("""
-<style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Sora:wght@400;600;700&display=swap');
-    html, body, [class*="css"] { font-family: 'Inter', sans-serif; background-color: #f0f4f8; color: #1a2332; }
-    .main { background-color: #f0f4f8; }
-    .block-container { padding-top: 2rem; padding-bottom: 3rem; max-width: 1200px; }
-    .header-wrap { background: linear-gradient(135deg, #1e3a5f 0%, #2563a8 60%, #3b82c4 100%); border-radius: 16px; padding: 2.5rem 3rem; margin-bottom: 2rem; box-shadow: 0 4px 24px rgba(37,99,168,0.18); }
-    .header-title { font-family: 'Sora', sans-serif; font-size: 2.4rem; font-weight: 700; color: #ffffff; letter-spacing: -0.5px; line-height: 1.15; margin-bottom: 0.4rem; }
-    .header-sub { font-size: 0.9rem; color: #a8c8e8; font-weight: 300; letter-spacing: 0.8px; text-transform: uppercase; }
-    .metric-card { background: #ffffff; border: 1px solid #dbe8f5; border-radius: 12px; padding: 1.2rem 1rem; text-align: center; box-shadow: 0 2px 8px rgba(37,99,168,0.07); }
-    .metric-value { font-family: 'Sora', sans-serif; font-size: 1.8rem; font-weight: 700; color: #2563a8; display: block; }
-    .metric-label { font-size: 0.7rem; color: #6b8cae; text-transform: uppercase; letter-spacing: 1px; margin-top: 0.2rem; }
-    .section-title { font-family: 'Sora', sans-serif; font-size: 1.2rem; font-weight: 600; color: #1e3a5f; border-bottom: 2px solid #dbe8f5; padding-bottom: 0.5rem; margin-bottom: 1.2rem; margin-top: 2rem; }
-    .suburb-row { background: #ffffff; border: 1px solid #dbe8f5; border-radius: 10px; padding: 0.9rem 1.2rem; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 1px 4px rgba(37,99,168,0.05); }
-    .score-high { color: #dc2626; font-weight: 600; }
-    .score-med  { color: #d97706; font-weight: 600; }
-    .score-low  { color: #2563a8; font-weight: 600; }
-    .stat-card { background: #ffffff; border: 1px solid #dbe8f5; border-radius: 10px; padding: 1.2rem 1.5rem; margin-bottom: 1rem; box-shadow: 0 2px 8px rgba(37,99,168,0.07); }
-    div[data-testid="stSidebar"] { background-color: #ffffff; border-right: 1px solid #dbe8f5; }
-    .about-box { background: #ffffff; border: 1px solid #dbe8f5; border-left: 4px solid #2563a8; border-radius: 10px; padding: 1.5rem; font-size: 0.88rem; color: #4a6080; line-height: 1.9; box-shadow: 0 2px 8px rgba(37,99,168,0.05); }
-    .stTextInput input { background: #ffffff !important; border: 1px solid #dbe8f5 !important; color: #1a2332 !important; border-radius: 8px !important; }
-    .tag { display: inline-block; background: #e8f0fb; color: #2563a8; font-size: 0.72rem; font-weight: 500; padding: 0.2rem 0.6rem; border-radius: 20px; margin-right: 0.3rem; }
-    .legend-wrap { background: linear-gradient(135deg, #1e3a5f 0%, #1a3358 100%); border-radius: 14px; padding: 1.6rem 2rem; margin-bottom: 1.2rem; box-shadow: 0 4px 18px rgba(30,58,95,0.18); display: flex; gap: 1.5rem; }
-    .legend-item { flex: 1; border-radius: 10px; padding: 1.1rem 1.2rem; }
-    .legend-item-red { background: rgba(220,38,38,0.15); border: 1px solid rgba(220,38,38,0.35); }
-    .legend-item-orange { background: rgba(217,119,6,0.15); border: 1px solid rgba(217,119,6,0.35); }
-    .legend-item-blue { background: rgba(59,130,196,0.15); border: 1px solid rgba(59,130,196,0.35); }
-    .legend-score { font-size: 0.68rem; color: #a8c8e8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 0.3rem; }
-    .legend-title-red { font-family: 'Sora', sans-serif; font-size: 1rem; font-weight: 700; color: #f87171; margin-bottom: 0.4rem; }
-    .legend-title-orange { font-family: 'Sora', sans-serif; font-size: 1rem; font-weight: 700; color: #fbbf24; margin-bottom: 0.4rem; }
-    .legend-title-blue { font-family: 'Sora', sans-serif; font-size: 1rem; font-weight: 700; color: #93c5fd; margin-bottom: 0.4rem; }
-    .legend-desc { font-size: 0.78rem; color: #cbd5e1; line-height: 1.6; }
-</style>
+<div style='background:linear-gradient(135deg,#1e3a5f 0%,#1a3358 100%);border-radius:14px;padding:1.4rem 2rem;margin-bottom:1.2rem;box-shadow:0 4px 18px rgba(30,58,95,0.18);display:flex;gap:3rem;align-items:flex-start;'>
+    <div style='flex:1;border-left:3px solid #f87171;padding-left:1rem;'>
+        <div style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:0.3rem'>Top 50 Nationally</div>
+        <div style='font-family:Sora,sans-serif;font-size:0.95rem;font-weight:700;color:#f87171;margin-bottom:0.3rem'>Critical Pressure</div>
+        <div style='font-size:0.76rem;color:#cbd5e1;line-height:1.6;'>All signals align — sustained population growth, strong approval momentum, and consistent 20-year history. Predicted to be among Australia's highest construction zones.</div>
+    </div>
+    <div style='flex:1;border-left:3px solid #fbbf24;padding-left:1rem;'>
+        <div style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:0.3rem'>Rank 51 – 200</div>
+        <div style='font-family:Sora,sans-serif;font-size:0.95rem;font-weight:700;color:#fbbf24;margin-bottom:0.3rem'>High Pressure</div>
+        <div style='font-size:0.76rem;color:#cbd5e1;line-height:1.6;'>Most indicators are elevated — strong population trend, above-average approvals, and positive long-term momentum. A construction surge is likely.</div>
+    </div>
+    <div style='flex:1;border-left:3px solid #93c5fd;padding-left:1rem;'>
+        <div style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:0.3rem'>Rank 201+</div>
+        <div style='font-family:Sora,sans-serif;font-size:0.95rem;font-weight:700;color:#93c5fd;margin-bottom:0.3rem'>Moderate / Low</div>
+        <div style='font-size:0.76rem;color:#cbd5e1;line-height:1.6;'>Some growth signals present but model confidence is lower. Population growth or approval activity may be inconsistent or below the threshold seen in high-pressure suburbs.</div>
+    </div>
+</div>
+<p style='font-size:0.82rem;color:#6b8cae;margin-top:0.2rem'>2,438 suburb boundaries shown &nbsp;·&nbsp; Hover any suburb for details</p>
 """, unsafe_allow_html=True)
 
 
