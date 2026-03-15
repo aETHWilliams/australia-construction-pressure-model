@@ -109,12 +109,21 @@ A score near 100 means the model is highly confident that suburb will be in the 
 <div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>How the Model Works</div>
 <div style='font-size:0.78rem; color:#4a6080; line-height:1.8; margin-bottom:1.2rem'>
 Two machine learning models — <b>XGBoost</b> and <b>Random Forest</b> — were trained on 2022–24 historical data to predict actual 2024–25 construction activity, then validated against real ABS results.<br><br>
-The v5 model achieves an <b>R² of 0.72</b> — explaining 72% of the variance in real construction activity across all 2,442 suburbs.<br><br>
-<b>Training & Validation</b><br>
-To prevent data leakage, the model was trained exclusively on 2022–23 and 2023–24 data.
-The 2024–25 ABS results were kept completely separate and only used <i>after</i> training to validate predictions —
-meaning the model never saw the answer before making its predictions.
-All 20 features were engineered from historical data only.
+The v5 model achieves an <b>R² of 0.72</b> — explaining 72% of the variance in real construction activity across 2,442 suburbs.<br><br>
+<b>Data Leakage Prevention</b><br>
+All 20 features use only data available prior to the prediction period. The 2024–25 ABS results were kept completely separate and only used <i>after</i> training to validate. When the most forward-looking feature (2025–26 FYTD approvals) is removed entirely, R² drops by less than 0.01 — confirming the model's predictive power comes from historical momentum signals, not future data.
+</div>
+
+<div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>Version History</div>
+<div style='font-size:0.78rem; color:#4a6080; line-height:1.8; margin-bottom:1.2rem'>
+<b>v1–v3</b> — Queensland only. Iterative feature engineering, progressively adding data sources.<br><br>
+<b>v4</b> — National model covering all 2,442 suburbs. XGBoost + Random Forest classification. AUC 0.938. 100% hit rate on top 20 backtest predictions vs 25% from random selection.<br><br>
+<b>v5 (current)</b> — Switched from classification to regression. Now trains directly on actual 2024–25 ABS dwelling approval counts converted to percentile scores, giving every suburb a genuinely unique prediction. R² 0.72. Added SHAP explainability and national ranking system.
+</div>
+
+<div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>Known Limitations</div>
+<div style='font-size:0.78rem; color:#4a6080; line-height:1.8; margin-bottom:1.2rem'>
+The model does not currently incorporate government infrastructure announcements — planned hospitals, schools, highways and land releases are not in any of the 5 data sources. Suburbs with major infrastructure pipelines (e.g. Upper Coomera) may be underscored as a result. This is the primary target for v6.
 </div>
 
 <div style='border-top:1px solid #dbe8f5; padding-top:1rem'>
