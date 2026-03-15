@@ -92,13 +92,11 @@ for col, (val, label) in zip([c1, c2, c3, c4, c5], metrics):
 st.markdown("<div style='margin-top: 2rem'></div>", unsafe_allow_html=True)
 
 # Sidebar
-# Inline filters
-f1, f2, f3 = st.columns([1, 1, 4])
-states = ["All"] + sorted(results["state"].unique().tolist())
-selected = f1.selectbox("State", states)
-min_score = f2.slider("Minimum Pressure Score", 0, 100, 75) 
+selected = "All"
+min_score = 0
 
 st.sidebar.markdown("---")
+
 st.sidebar.markdown("""
 <div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>What This App Does</div>
 <div style='font-size:0.78rem; color:#4a6080; line-height:1.8; margin-bottom:1.2rem'>
