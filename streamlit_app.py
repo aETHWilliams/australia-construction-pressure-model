@@ -87,14 +87,33 @@ min_score = st.sidebar.slider("Minimum Pressure Score", 0, 100, 75)
 
 st.sidebar.markdown("---")
 st.sidebar.markdown("""
+<div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>What This App Does</div>
+<div style='font-size:0.78rem; color:#4a6080; line-height:1.8; margin-bottom:1.2rem'>
+This tool predicts which Australian suburbs are likely to experience a construction boom <b>before it happens</b>. 
+It analyses 20 signals per suburb — population growth, building approval history, socioeconomic data, and forward-looking 2025-26 approvals — 
+and assigns every suburb a <b>Pressure Score from 0 to 100</b>.<br><br>
+A score near 100 means the model is highly confident that suburb will be in the top tier of construction activity nationally.
+</div>
+
+<div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>How the Model Works</div>
+<div style='font-size:0.78rem; color:#4a6080; line-height:1.8; margin-bottom:1.2rem'>
+Two machine learning models — <b>XGBoost</b> and <b>Random Forest</b> — were trained on 2022–24 historical data and asked to predict which suburbs would surge in 2024–25. 
+The actual ABS results were then checked against the predictions.<br><br>
+Both models achieved an <b>AUC of 0.938</b> — meaning they correctly ranked high-growth suburbs over low-growth ones 94% of the time. 
+The top 20 predictions were all confirmed correct — a <b>100% hit rate</b> vs 25% from random selection.
+</div>
+
+<div style='border-top:1px solid #dbe8f5; padding-top:1rem'>
+<div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>Data Sources</div>
 <div style='font-size:0.78rem; color:#6b8cae; line-height:2'>
-<b style='color:#1e3a5f'>Data Sources</b><br>
-ABS Building Approvals 2022-26<br>
-ABS Regional Population 2023-24<br>
-ABS Population History 2001-2024<br>
+ABS Building Approvals 2022–26<br>
+ABS Regional Population 2023–24<br>
+ABS Population History 2001–2024<br>
 SEIFA Socioeconomic Index 2021<br>
-ABS Approvals 2025-26 FYTD
-</div>""", unsafe_allow_html=True)
+ABS Approvals 2025–26 FYTD
+</div>
+</div>
+""", unsafe_allow_html=True)
 
 # Filter
 filtered = results.copy()
