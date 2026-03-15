@@ -58,6 +58,30 @@ def load_data():
 
 results, shap_df, geojson = load_data()
 
+def rank_to_color(rank):
+    if rank <= 50:
+        return '#dc2626'
+    elif rank <= 200:
+        return '#d97706'
+    else:
+        return '#2563a8'
+
+def rank_to_signal(rank):
+    if rank <= 50:
+        return '🔴 Critical'
+    elif rank <= 200:
+        return '🟡 High'
+    else:
+        return '🔵 Moderate'
+
+def rank_to_map_color(rank):
+    if rank <= 50:
+        return [220, 38, 38, 180]
+    elif rank <= 200:
+        return [217, 119, 6, 180]
+    else:
+        return [37, 99, 168, 140]
+
 # Header
 st.markdown("""
 <div class="header-wrap">
@@ -136,19 +160,19 @@ filtered = filtered[filtered["pressure_score"] >= min_score]
 filtered = filtered.sort_values("pressure_score", ascending=False)
 
 # Top 10
-top10 = results.sort_values('pressure_score', ascending=False).head(10).reset_index(drop=True)
+top10 = results.sort_values('national_rank').head(10).reset_index(drop=True)
 
 rows_html = ""
 for i, row in top10.iterrows():
+    rank = int(row['national_rank'])
     score = row['pressure_score']
-    rank = i + 1
-    color = '#f87171' if score >= 99 else '#fbbf24' if score >= 90 else '#93c5fd'
-    signal = '🔴 Critical' if score >= 99 else '🟡 High' if score >= 90 else '🔵 Moderate'
+    color = '#f87171' if rank <= 50 else '#fbbf24' if rank <= 200 else '#93c5fd'
+    signal = '🔴 Critical' if rank <= 50 else '🟡 High' if rank <= 200 else '🔵 Moderate'
     approvals = int(row['dwellings_2526_fytd']) if pd.notna(row['dwellings_2526_fytd']) else 'N/A'
-    bg = 'rgba(255,255,255,0.05)' if rank % 2 == 0 else 'transparent'
-    rows_html += f"<tr style='font-size:0.82rem;background:{bg};'><td style='padding:0.5rem 0.6rem;color:rgba(255,255,255,0.35);font-weight:600'>{rank}</td><td style='padding:0.5rem 0.6rem;color:#ffffff;font-weight:600'>{row['sa2_name']}</td><td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{row['state']}</td><td style='padding:0.5rem 0.6rem;color:{color};font-weight:700'>{score}</td><td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{row['erp_change_pct']}%</td><td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{int(row['years_of_growth'])}/22</td><td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{approvals}</td><td style='padding:0.5rem 0.6rem;color:{color}'>{signal}</td></tr>"
+    bg = 'rgba(255,255,255,0.05)' if (i + 1) % 2 == 0 else 'transparent'
+    rows_html += f"<tr style='font-size:0.82rem;background:{bg};'><td style='padding:0.5rem 0.6rem;color:rgba(255,255,255,0.35);font-weight:600'>#{rank}</td><td style='padding:0.5rem 0.6rem;color:#ffffff;font-weight:600'>{row['sa2_name']}</td><td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{row['state']}</td><td style='padding:0.5rem 0.6rem;color:{color};font-weight:700'>{score}</td><td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{row['erp_change_pct']}%</td><td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{int(row['years_of_growth'])}/22</td><td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{approvals}</td><td style='padding:0.5rem 0.6rem;color:{color}'>{signal}</td></tr>"
 
-html = f"""<div style='background:linear-gradient(135deg,#1e3a5f 0%,#2563a8 60%,#3b82c4 100%);border-radius:16px;padding:1.8rem 2rem;margin-bottom:2rem;box-shadow:0 4px 24px rgba(37,99,168,0.18);'><div style='font-family:Sora,sans-serif;font-size:1.2rem;font-weight:700;color:#ffffff;margin-bottom:0.2rem'>Top 10 Predicted Surge Suburbs — 2026/27</div><div style='font-size:0.78rem;color:#a8c8e8;margin-bottom:1.2rem'>Ranked by Construction Pressure Score &nbsp;·&nbsp; Based on 20 ML Features</div><table style='width:100%;border-collapse:collapse;'><tr style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid rgba(255,255,255,0.1);'><td style='padding:0.4rem 0.6rem'>#</td><td style='padding:0.4rem 0.6rem'>Suburb</td><td style='padding:0.4rem 0.6rem'>State</td><td style='padding:0.4rem 0.6rem'>Score</td><td style='padding:0.4rem 0.6rem'>Pop Growth</td><td style='padding:0.4rem 0.6rem'>Growth Yrs</td><td style='padding:0.4rem 0.6rem'>Approvals FYTD</td><td style='padding:0.4rem 0.6rem'>Signal</td></tr>{rows_html}</table></div>"""
+html = f"""<div style='background:linear-gradient(135deg,#1e3a5f 0%,#2563a8 60%,#3b82c4 100%);border-radius:16px;padding:1.8rem 2rem;margin-bottom:2rem;box-shadow:0 4px 24px rgba(37,99,168,0.18);'><div style='font-family:Sora,sans-serif;font-size:1.2rem;font-weight:700;color:#ffffff;margin-bottom:0.2rem'>Top 10 Predicted Surge Suburbs — 2026/27</div><div style='font-size:0.78rem;color:#a8c8e8;margin-bottom:1.2rem'>Ranked by National Construction Pressure Rank &nbsp;·&nbsp; Based on 20 ML Features</div><table style='width:100%;border-collapse:collapse;'><tr style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid rgba(255,255,255,0.1);'><td style='padding:0.4rem 0.6rem'>Rank</td><td style='padding:0.4rem 0.6rem'>Suburb</td><td style='padding:0.4rem 0.6rem'>State</td><td style='padding:0.4rem 0.6rem'>Score</td><td style='padding:0.4rem 0.6rem'>Pop Growth</td><td style='padding:0.4rem 0.6rem'>Growth Yrs</td><td style='padding:0.4rem 0.6rem'>Approvals FYTD</td><td style='padding:0.4rem 0.6rem'>Signal</td></tr>{rows_html}</table></div>"""
 st.markdown(html, unsafe_allow_html=True)
 
 # Search
@@ -159,25 +183,27 @@ if search:
     if len(found) > 0:
         for _, row in found.iterrows():
             score = row["pressure_score"]
-            cls = "score-high" if score >= 99 else "score-med" if score >= 90 else "score-low"
+            rank = int(row['national_rank'])
+            cls = "score-high" if rank <= 50 else "score-med" if rank <= 200 else "score-low"
+            signal_label = '🔴 Critical' if rank <= 50 else '🟡 High' if rank <= 200 else '🔵 Moderate'
             st.markdown(f"""
             <div class="suburb-row">
                 <div>
                     <b style='color:#1e3a5f;font-size:1rem'>{row['sa2_name']}</b>
                     <span style='color:#6b8cae; font-size:0.82rem'> &nbsp;{row['state']}</span>
+                    <span style='color:#6b8cae; font-size:0.78rem'> &nbsp;·&nbsp; National Rank #{rank}</span>
                 </div>
                 <div style='text-align:right'>
                     <span class='{cls}' style='font-size:1.1rem'>{score}/100</span>
                     <span style='color:#6b8cae; font-size:0.8rem; margin-left:1rem'>
-                        Pop growth {row['erp_change_pct']}%
-                        &nbsp;|&nbsp;
-                        {int(row['years_of_growth'])}/22 consecutive growth years
+                        {signal_label} &nbsp;|&nbsp; Pop growth {row['erp_change_pct']}%
+                        &nbsp;|&nbsp; {int(row['years_of_growth'])}/22 consecutive growth years
                     </span>
                 </div>
             </div>""", unsafe_allow_html=True)
 
             if pd.notna(row.get('lat')) and pd.notna(row.get('lon')):
-                score_color = '#dc2626' if score >= 99 else '#d97706' if score >= 90 else '#2563a8'
+                score_color = rank_to_color(rank)
                 st.markdown(f"""
                 <div class="stat-card">
                     <div style='font-family:Sora,sans-serif;font-size:1rem;font-weight:600;color:#1e3a5f;margin-bottom:0.8rem'>
@@ -186,6 +212,10 @@ if search:
                     <div style='display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;'>
                         <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>Pressure Score</span><br>
                             <span style='font-size:1.4rem;font-weight:700;color:{score_color}'>{score}/100</span></div>
+                        <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>National Rank</span><br>
+                            <span style='font-size:1.4rem;font-weight:700;color:{score_color}'>#{rank}</span></div>
+                        <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>Signal</span><br>
+                            <span style='font-size:1.4rem;font-weight:700;color:{score_color}'>{signal_label}</span></div>
                         <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>Pop Growth</span><br>
                             <span style='font-size:1.4rem;font-weight:700;color:#1e3a5f'>{row['erp_change_pct']}%</span></div>
                         <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>20yr Growth</span><br>
@@ -227,17 +257,17 @@ st.markdown('<div class="section-title">Pressure Map</div>', unsafe_allow_html=T
 st.markdown("""
 <div class="legend-wrap">
     <div class="legend-item legend-item-red">
-        <div class="legend-score">Score 99 – 100</div>
+        <div class="legend-score">Top 50 Nationally</div>
         <div class="legend-title-red">🔴 Critical Pressure</div>
         <div class="legend-desc">All signals align — sustained population growth, strong approval momentum, and consistent 20-year history. Model predicts this suburb will be among Australia's highest construction zones next year.</div>
     </div>
     <div class="legend-item legend-item-orange">
-        <div class="legend-score">Score 90 – 98</div>
+        <div class="legend-score">Rank 51 – 200</div>
         <div class="legend-title-orange">🟡 High Pressure</div>
         <div class="legend-desc">Most indicators are elevated — strong population trend, above-average approvals, and positive long-term momentum. A construction surge is likely, with one or two signals not yet at peak levels.</div>
     </div>
     <div class="legend-item legend-item-blue">
-        <div class="legend-score">Score below 90</div>
+        <div class="legend-score">Rank 201+</div>
         <div class="legend-title-blue">🔵 Moderate / Low</div>
         <div class="legend-desc">Some growth signals present but model confidence is lower. Population growth or approval activity may be inconsistent or below the threshold seen in high-pressure suburbs.</div>
     </div>
@@ -246,18 +276,18 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # GeoJSON polygon map
-def score_to_color(score):
-    if score >= 99:
-        return [220, 38, 38, 180]
-    elif score >= 90:
-        return [217, 119, 6, 180]
-    else:
-        return [37, 99, 168, 140]
-
 for feature in geojson['features']:
-    score = feature['properties'].get('pressure_score', 0)
-    feature['properties']['fill_color'] = score_to_color(score)
-    feature['properties']['signal'] = '🔴 Critical Pressure' if score >= 99 else '🟡 High Pressure' if score >= 90 else '🔵 Moderate / Low'
+    name = feature['properties'].get('SA2_NAME21', '')
+    match = results[results['sa2_name'] == name]
+    if len(match) > 0:
+        rank = int(match.iloc[0]['national_rank'])
+        score = match.iloc[0]['pressure_score']
+    else:
+        rank = 9999
+        score = 0
+    feature['properties']['fill_color'] = rank_to_map_color(rank)
+    feature['properties']['signal'] = '🔴 Critical Pressure' if rank <= 50 else '🟡 High Pressure' if rank <= 200 else '🔵 Moderate / Low'
+    feature['properties']['national_rank'] = rank
     feature['properties']['growth_20yr_pct'] = round(feature['properties'].get('growth_20yr', 0) * 100, 1)
 
 layer = pdk.Layer(
@@ -274,7 +304,7 @@ layer = pdk.Layer(
 view = pdk.ViewState(latitude=-27.0, longitude=134.0, zoom=3.5, pitch=0)
 
 tooltip = {
-    "html": "<b>{SA2_NAME21}</b> ({state})<br><b>{signal}</b><br>Pressure Score: <b>{pressure_score}</b>/100<br>Pop Growth: {erp_change_pct}%<br>Growth Years: {years_of_growth}/22<br>20yr Growth: {growth_20yr_pct}%",
+    "html": "<b>{SA2_NAME21}</b> ({state})<br><b>{signal}</b><br>National Rank: <b>#{national_rank}</b><br>Pressure Score: <b>{pressure_score}</b>/100<br>Pop Growth: {erp_change_pct}%<br>Growth Years: {years_of_growth}/22",
     "style": {
         "backgroundColor": "#1e3a5f",
         "color": "white",
@@ -301,14 +331,14 @@ st.markdown(
 )
 
 display = filtered[[
-    "sa2_name", "state", "pressure_score",
+    "national_rank", "sa2_name", "state", "pressure_score",
     "erp_change_pct", "growth_20yr",
-    "years_of_growth", "dwellings_2526_fytd"
+    "years_of_growth", "dwellings_2526_fytd", "signal"
 ]].copy()
 display.columns = [
-    "Suburb", "State", "Pressure Score",
+    "National Rank", "Suburb", "State", "Pressure Score",
     "Pop Growth %", "20yr Growth",
-    "Consecutive Growth Years", "2025-26 Approvals FYTD"
+    "Consecutive Growth Years", "2025-26 Approvals FYTD", "Signal"
 ]
 display["20yr Growth"] = (display["20yr Growth"] * 100).round(1).astype(str) + "%"
 display["Pressure Score"] = display["Pressure Score"].round(1)
