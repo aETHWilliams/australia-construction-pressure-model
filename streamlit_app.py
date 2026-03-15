@@ -205,34 +205,15 @@ if search:
                     shap_vals = shap_row.drop(columns=['sa2_name']).iloc[0]
                     top5 = shap_vals.abs().sort_values(ascending=False).head(5)
                     top5_vals = shap_vals[top5.index]
-
-                    bars_html = ""
                     max_val = top5.max()
+                    bars_html = ""
                     for feat, val in zip(top5.index, top5_vals):
                         bar_pct = int(abs(val) / max_val * 100)
                         direction = 'Pushes score up' if val > 0 else 'Pushes score down'
                         bar_color = '#2563a8' if val > 0 else '#94a3b8'
-                        bars_html += f"""
-                        <div style='margin-bottom:0.7rem'>
-                            <div style='display:flex;justify-content:space-between;margin-bottom:0.2rem'>
-                                <span style='font-size:0.78rem;color:#1e3a5f;font-weight:500'>{feat}</span>
-                                <span style='font-size:0.72rem;color:#6b8cae'>{direction}</span>
-                            </div>
-                            <div style='background:#f0f4f8;border-radius:4px;height:8px;'>
-                                <div style='background:{bar_color};width:{bar_pct}%;height:8px;border-radius:4px;'></div>
-                            </div>
-                        </div>"""
-
-                    st.markdown(f"""
-                    <div class="stat-card" style='margin-top:0.5rem'>
-                        <div style='font-family:Sora,sans-serif;font-size:0.9rem;font-weight:600;color:#1e3a5f;margin-bottom:0.8rem'>
-                            🧠 Why did {row['sa2_name']} score {score}/100?
-                        </div>
-                        <div style='font-size:0.75rem;color:#6b8cae;margin-bottom:1rem'>
-                            Top 5 factors driving this suburb's pressure score — based on SHAP values from the XGBoost model
-                        </div>
-                        {bars_html}
-                    </div>""", unsafe_allow_html=True)
+                        bars_html += f"<div style='margin-bottom:0.7rem'><div style='display:flex;justify-content:space-between;margin-bottom:0.2rem'><span style='font-size:0.78rem;color:#1e3a5f;font-weight:500'>{feat}</span><span style='font-size:0.72rem;color:#6b8cae'>{direction}</span></div><div style='background:#f0f4f8;border-radius:4px;height:8px;'><div style='background:{bar_color};width:{bar_pct}%;height:8px;border-radius:4px;'></div></div></div>"
+                    shap_html = f"<div class='stat-card' style='margin-top:0.5rem'><div style='font-family:Sora,sans-serif;font-size:0.9rem;font-weight:600;color:#1e3a5f;margin-bottom:0.8rem'>Why did {row['sa2_name']} score {score}/100?</div><div style='font-size:0.75rem;color:#6b8cae;margin-bottom:1rem'>Top 5 factors driving this suburb's pressure score — based on SHAP values from the XGBoost model</div>{bars_html}</div>"
+                    st.markdown(shap_html, unsafe_allow_html=True)
 
                 suburb_map = pd.DataFrame({'lat': [row['lat']], 'lon': [row['lon']]})
                 st.map(suburb_map, latitude=row['lat'], longitude=row['lon'], zoom=11)
