@@ -100,7 +100,12 @@ A score near 100 means the model is highly confident that suburb will be in the 
 Two machine learning models — <b>XGBoost</b> and <b>Random Forest</b> — were trained on 2022–24 historical data and asked to predict which suburbs would surge in 2024–25. 
 The actual ABS results were then checked against the predictions.<br><br>
 Both models achieved an <b>AUC of 0.938</b> — meaning they correctly ranked high-growth suburbs over low-growth ones 94% of the time. 
-The top 20 predictions were all confirmed correct — a <b>100% hit rate</b> vs 25% from random selection.
+The top 20 predictions were all confirmed correct — a <b>100% hit rate</b> vs 25% from random selection.<br><br>
+<b>Training & Validation</b><br>
+To prevent data leakage, the model was trained exclusively on 2022–23 and 2023–24 data.
+The 2024–25 ABS results were kept completely separate and only used <i>after</i> training to validate predictions —
+meaning the model never saw the answer before making its predictions.
+All 20 features were engineered from historical data only, ensuring no future information could influence the model's output.
 </div>
 
 <div style='border-top:1px solid #dbe8f5; padding-top:1rem'>
