@@ -146,7 +146,7 @@ Top 10 Predicted Surge Suburbs — 2026/27
 Ranked by Construction Pressure Score &nbsp;·&nbsp; Based on 20 ML Features
 </div>
 <table style='width:100%;border-collapse:collapse;'>
-<tr style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid rgba(255,255,255,0.1);padding-bottom:0.5rem'>
+<tr style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid rgba(255,255,255,0.1);'>
 <td style='padding:0.4rem 0.6rem'>#</td>
 <td style='padding:0.4rem 0.6rem'>Suburb</td>
 <td style='padding:0.4rem 0.6rem'>State</td>
@@ -180,35 +180,8 @@ for i, row in top10.iterrows():
 
 st.markdown("</table></div>", unsafe_allow_html=True)
 
-for i, row in top10.iterrows():
-    score = row['pressure_score']
-    rank = i + 1
-    color = '#f87171' if score >= 99 else '#fbbf24' if score >= 90 else '#93c5fd'
-    signal = '🔴 Critical' if score >= 99 else '🟡 High' if score >= 90 else '🔵 Moderate'
-    approvals = int(row['dwellings_2526_fytd']) if pd.notna(row['dwellings_2526_fytd']) else 'N/A'
-    st.markdown(f"""
-    <div style='background:rgba(255,255,255,0.07);border:1px solid rgba(255,255,255,0.12);
-    border-radius:10px;padding:0.9rem 1.2rem;margin-bottom:0.5rem;
-    display:flex;justify-content:space-between;align-items:center;'>
-        <div style='display:flex;align-items:center;gap:1rem'>
-            <div style='font-family:Sora,sans-serif;font-size:1.3rem;font-weight:700;
-            color:rgba(255,255,255,0.25);min-width:2rem'>#{rank}</div>
-            <div>
-                <div style='font-family:Sora,sans-serif;font-size:1rem;font-weight:600;
-                color:#ffffff'>{row['sa2_name']}</div>
-                <div style='font-size:0.76rem;color:#a8c8e8;margin-top:0.1rem'>
-                    {row['state']} &nbsp;·&nbsp; Pop growth {row['erp_change_pct']}% &nbsp;·&nbsp; {int(row['years_of_growth'])}/22 growth years &nbsp;·&nbsp; {approvals} approvals FYTD
-                </div>
-            </div>
-        </div>
-        <div style='text-align:right'>
-            <div style='font-family:Sora,sans-serif;font-size:1.2rem;font-weight:700;color:{color}'>{score}/100</div>
-            <div style='font-size:0.72rem;color:#a8c8e8;margin-top:0.1rem'>{signal}</div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
-
-st.markdown("</div>", unsafe_allow_html=True)
+# Search
+st.markdown('<div class="section-title">Suburb Search</div>', unsafe_allow_html=True)
 search = st.text_input("Suburb Search", label_visibility="collapsed", placeholder="Search any suburb — e.g. Ripley, Byford, Sunbury...")
 if search:
     found = results[results["sa2_name"].str.contains(search, case=False, na=False)]
@@ -294,7 +267,6 @@ def score_to_color(score):
     else:
         return [37, 99, 168, 140]
 
-# Add color and signal to each feature
 for feature in geojson['features']:
     score = feature['properties'].get('pressure_score', 0)
     feature['properties']['fill_color'] = score_to_color(score)
