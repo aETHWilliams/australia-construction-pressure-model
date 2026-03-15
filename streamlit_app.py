@@ -81,6 +81,8 @@ for col, (val, label) in zip([c1, c2, c3, c4, c5], metrics):
         <span class="metric-label">{label}</span>
     </div>""", unsafe_allow_html=True)
 
+st.markdown("<div style='margin-top: 2rem'></div>", unsafe_allow_html=True)
+
 # Sidebar
 st.sidebar.markdown("""
 <div style='font-family:Sora,sans-serif;font-size:1.1rem;font-weight:600;color:#1e3a5f;padding:0.5rem 0 1rem'>Filters</div>
@@ -148,31 +150,6 @@ for i, row in top10.iterrows():
 html = f"""<div style='background:linear-gradient(135deg,#1e3a5f 0%,#2563a8 60%,#3b82c4 100%);border-radius:16px;padding:1.8rem 2rem;margin-bottom:2rem;box-shadow:0 4px 24px rgba(37,99,168,0.18);'><div style='font-family:Sora,sans-serif;font-size:1.2rem;font-weight:700;color:#ffffff;margin-bottom:0.2rem'>Top 10 Predicted Surge Suburbs — 2026/27</div><div style='font-size:0.78rem;color:#a8c8e8;margin-bottom:1.2rem'>Ranked by Construction Pressure Score &nbsp;·&nbsp; Based on 20 ML Features</div><table style='width:100%;border-collapse:collapse;'><tr style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid rgba(255,255,255,0.1);'><td style='padding:0.4rem 0.6rem'>#</td><td style='padding:0.4rem 0.6rem'>Suburb</td><td style='padding:0.4rem 0.6rem'>State</td><td style='padding:0.4rem 0.6rem'>Score</td><td style='padding:0.4rem 0.6rem'>Pop Growth</td><td style='padding:0.4rem 0.6rem'>Growth Yrs</td><td style='padding:0.4rem 0.6rem'>Approvals FYTD</td><td style='padding:0.4rem 0.6rem'>Signal</td></tr>{rows_html}</table></div>"""
 
 st.markdown(html, unsafe_allow_html=True)
-st.markdown(f"""
-<div style='background:linear-gradient(135deg,#1e3a5f 0%,#2563a8 60%,#3b82c4 100%);
-border-radius:16px;padding:1.8rem 2rem;margin-bottom:2rem;
-box-shadow:0 4px 24px rgba(37,99,168,0.18);'>
-<div style='font-family:Sora,sans-serif;font-size:1.2rem;font-weight:700;color:#ffffff;margin-bottom:0.2rem'>
-Top 10 Predicted Surge Suburbs — 2026/27
-</div>
-<div style='font-size:0.78rem;color:#a8c8e8;margin-bottom:1.2rem'>
-Ranked by Construction Pressure Score &nbsp;·&nbsp; Based on 20 ML Features
-</div>
-<table style='width:100%;border-collapse:collapse;'>
-<tr style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid rgba(255,255,255,0.1);'>
-<td style='padding:0.4rem 0.6rem'>#</td>
-<td style='padding:0.4rem 0.6rem'>Suburb</td>
-<td style='padding:0.4rem 0.6rem'>State</td>
-<td style='padding:0.4rem 0.6rem'>Score</td>
-<td style='padding:0.4rem 0.6rem'>Pop Growth</td>
-<td style='padding:0.4rem 0.6rem'>Growth Yrs</td>
-<td style='padding:0.4rem 0.6rem'>Approvals FYTD</td>
-<td style='padding:0.4rem 0.6rem'>Signal</td>
-</tr>
-{rows_html}
-</table>
-</div>
-""", unsafe_allow_html=True)
 
 # Search
 st.markdown('<div class="section-title">Suburb Search</div>', unsafe_allow_html=True)
