@@ -1,6 +1,8 @@
 import streamlit as st
 import pandas as pd
 import pydeck as pdk
+import json
+import requests
 
 st.set_page_config(
     page_title="Australia Construction Pressure Index",
@@ -47,10 +49,13 @@ st.markdown("""
 
 @st.cache_data
 def load_data():
-    return pd.read_csv("aus_pressure_scores_v4.csv")
+    scores = pd.read_csv("aus_pressure_scores_v4.csv")
+    geo_url = "https://raw.githubusercontent.com/aETHWilliams/australia-construction-pressure-model/main/sa2_pressure.geojson"
+    geojson = requests.get(geo_url).json()
+    return scores, geojson
 
 
-results = load_data()
+results, geojson = load_data()
 
 # Header
 st.markdown("""
@@ -202,38 +207,40 @@ st.markdown("""
         <div class="legend-desc">Some growth signals present but model confidence is lower. Population growth or approval activity may be inconsistent or below the threshold seen in high-pressure suburbs.</div>
     </div>
 </div>
-<p style='font-size:0.82rem;color:#6b8cae;margin-top:0.2rem'>Top 800 highest-pressure suburbs shown &nbsp;·&nbsp; Hover any marker for details</p>
+<p style='font-size:0.82rem;color:#6b8cae;margin-top:0.2rem'>2,438 suburb boundaries shown &nbsp;·&nbsp; Hover any suburb for details</p>
 """, unsafe_allow_html=True)
 
-# Pydeck map
-map_data = results.dropna(subset=['lat', 'lon']).sort_values('pressure_score', ascending=False).head(800).copy()
-
+# GeoJSON polygon map
 def score_to_color(score):
     if score >= 99:
-        return [220, 38, 38, 200]
+        return [220, 38, 38, 180]
     elif score >= 90:
-        return [217, 119, 6, 200]
+        return [217, 119, 6, 180]
     else:
-        return [37, 99, 168, 180]
+        return [37, 99, 168, 140]
 
-map_data['color'] = map_data['pressure_score'].apply(score_to_color)
-map_data['signal'] = map_data['pressure_score'].apply(lambda s: '🔴 Critical Pressure' if s >= 99 else '🟡 High Pressure' if s >= 90 else '🔵 Moderate / Low')
-map_data['radius'] = map_data['pressure_score'].apply(lambda s: 800 + (s / 100) * 1500)
+# Add color and signal to each feature
+for feature in geojson['features']:
+    score = feature['properties'].get('pressure_score', 0)
+    feature['properties']['fill_color'] = score_to_color(score)
+    feature['properties']['signal'] = '🔴 Critical Pressure' if score >= 99 else '🟡 High Pressure' if score >= 90 else '🔵 Moderate / Low'
+    feature['properties']['growth_20yr_pct'] = round(feature['properties'].get('growth_20yr', 0) * 100, 1)
 
 layer = pdk.Layer(
-    'ScatterplotLayer',
-    data=map_data,
-    get_position='[lon, lat]',
-    get_fill_color='color',
-    get_radius='radius',
+    'GeoJsonLayer',
+    data=geojson,
     pickable=True,
-    opacity=0.85,
+    stroked=True,
+    filled=True,
+    get_fill_color='properties.fill_color',
+    get_line_color=[255, 255, 255, 60],
+    line_width_min_pixels=1,
 )
 
 view = pdk.ViewState(latitude=-27.0, longitude=134.0, zoom=3.5, pitch=0)
 
 tooltip = {
-    "html": "<b>{sa2_name}</b> ({state})<br><b>{signal}</b><br>Pressure Score: <b>{pressure_score}</b>/100<br>Pop Growth: {erp_change_pct}%<br>Growth Years: {years_of_growth}/22",
+    "html": "<b>{SA2_NAME21}</b> ({state})<br><b>{signal}</b><br>Pressure Score: <b>{pressure_score}</b>/100<br>Pop Growth: {erp_change_pct}%<br>Growth Years: {years_of_growth}/22<br>20yr Growth: {growth_20yr_pct}%",
     "style": {
         "backgroundColor": "#1e3a5f",
         "color": "white",
