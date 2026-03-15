@@ -308,13 +308,29 @@ st.dataframe(display, use_container_width=True, height=480, hide_index=True)
 
 # State chart
 st.markdown('<div class="section-title">High Pressure Suburbs by State</div>', unsafe_allow_html=True)
+
 state_counts = (
     results[results["pressure_score"] >= 75]
     .groupby("state").size()
-    .reset_index(name="High Pressure Suburbs")
-    .sort_values("High Pressure Suburbs", ascending=False)
+    .reset_index(name="count")
+    .sort_values("count", ascending=False)
 )
-st.bar_chart(state_counts.set_index("state"))
+
+max_count = state_counts["count"].max()
+bars = ""
+for _, row in state_counts.iterrows():
+    bar_pct = int(row["count"] / max_count * 100)
+    bars += f"""
+    <div style='display:flex;align-items:center;margin-bottom:0.6rem;gap:1rem;'>
+        <div style='width:2.5rem;font-size:0.78rem;color:#6b8cae;font-weight:500;text-align:right;flex-shrink:0'>{row['state']}</div>
+        <div style='flex:1;background:#f0f4f8;border-radius:4px;height:28px;position:relative;'>
+            <div style='background:linear-gradient(90deg,#2563a8,#3b82c4);width:{bar_pct}%;height:28px;border-radius:4px;'></div>
+        </div>
+        <div style='width:2rem;font-size:0.82rem;color:#1e3a5f;font-weight:600;flex-shrink:0'>{row["count"]}</div>
+    </div>"""
+
+chart_html = f"<div class='stat-card'><div style='font-size:0.78rem;color:#6b8cae;margin-bottom:1rem'>Number of suburbs with pressure score above 75 — by state</div>{bars}</div>"
+st.markdown(chart_html, unsafe_allow_html=True)
 
 # About
 st.markdown('<div class="section-title">About This Model</div>', unsafe_allow_html=True)
