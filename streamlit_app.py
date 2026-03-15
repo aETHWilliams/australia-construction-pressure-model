@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import pydeck as pdk
 
 st.set_page_config(
     page_title="Australia Construction Pressure Index",
@@ -117,7 +118,6 @@ if search:
                 </div>
             </div>""", unsafe_allow_html=True)
 
-            # Show detailed stat card and zoom map to suburb
             if pd.notna(row.get('lat')) and pd.notna(row.get('lon')):
                 score_color = '#dc2626' if score >= 99 else '#d97706' if score >= 90 else '#2563a8'
                 st.markdown(f"""
@@ -141,7 +141,6 @@ if search:
                     </div>
                 </div>""", unsafe_allow_html=True)
 
-                # Zoom map to this suburb
                 suburb_map = pd.DataFrame({'lat': [row['lat']], 'lon': [row['lon']]})
                 st.map(suburb_map, latitude=row['lat'], longitude=row['lon'], zoom=11)
 
@@ -175,12 +174,53 @@ k3.markdown("""
 
 st.markdown("<br>", unsafe_allow_html=True)
 st.markdown(
-    "<span style='font-size:0.82rem;color:#6b8cae'>Top 500 highest-pressure suburbs shown.</span>",
+    "<span style='font-size:0.82rem;color:#6b8cae'>Top 300 highest-pressure suburbs shown. Hover for details.</span>",
     unsafe_allow_html=True
 )
 
-map_data = results.dropna(subset=['lat', 'lon']).sort_values('pressure_score', ascending=False).head(500)
-st.map(map_data[['lat', 'lon']], latitude=-27.0, longitude=134.0, zoom=3)
+# Pydeck map — colour coded by pressure score
+map_data = results.dropna(subset=['lat', 'lon']).sort_values('pressure_score', ascending=False).head(300).copy()
+
+def score_to_color(score):
+    if score >= 99:
+        return [220, 38, 38, 200]
+    elif score >= 90:
+        return [217, 119, 6, 200]
+    else:
+        return [37, 99, 168, 180]
+
+map_data['color'] = map_data['pressure_score'].apply(score_to_color)
+map_data['radius'] = map_data['pressure_score'].apply(lambda s: 1500 + (s / 100) * 3000)
+
+layer = pdk.Layer(
+    'ScatterplotLayer',
+    data=map_data,
+    get_position='[lon, lat]',
+    get_fill_color='color',
+    get_radius='radius',
+    pickable=True,
+    opacity=0.85,
+)
+
+view = pdk.ViewState(latitude=-27.0, longitude=134.0, zoom=3.5, pitch=0)
+
+tooltip = {
+    "html": "<b>{sa2_name}</b> ({state})<br>Pressure Score: <b>{pressure_score}</b>/100<br>Pop Growth: {erp_change_pct}%<br>Growth Years: {years_of_growth}/22",
+    "style": {
+        "backgroundColor": "#1e3a5f",
+        "color": "white",
+        "fontSize": "13px",
+        "padding": "8px",
+        "borderRadius": "6px"
+    }
+}
+
+st.pydeck_chart(pdk.Deck(
+    layers=[layer],
+    initial_view_state=view,
+    tooltip=tooltip,
+    map_style='https://basemaps.cartocdn.com/gl/positron-gl-style/style.json'
+))
 
 # Table
 st.markdown(
