@@ -31,6 +31,16 @@ st.markdown("""
     .about-box { background: #ffffff; border: 1px solid #dbe8f5; border-left: 4px solid #2563a8; border-radius: 10px; padding: 1.5rem; font-size: 0.88rem; color: #4a6080; line-height: 1.9; box-shadow: 0 2px 8px rgba(37,99,168,0.05); }
     .stTextInput input { background: #ffffff !important; border: 1px solid #dbe8f5 !important; color: #1a2332 !important; border-radius: 8px !important; }
     .tag { display: inline-block; background: #e8f0fb; color: #2563a8; font-size: 0.72rem; font-weight: 500; padding: 0.2rem 0.6rem; border-radius: 20px; margin-right: 0.3rem; }
+    .legend-wrap { background: linear-gradient(135deg, #1e3a5f 0%, #1a3358 100%); border-radius: 14px; padding: 1.6rem 2rem; margin-bottom: 1.2rem; box-shadow: 0 4px 18px rgba(30,58,95,0.18); display: flex; gap: 1.5rem; }
+    .legend-item { flex: 1; border-radius: 10px; padding: 1.1rem 1.2rem; }
+    .legend-item-red { background: rgba(220,38,38,0.15); border: 1px solid rgba(220,38,38,0.35); }
+    .legend-item-orange { background: rgba(217,119,6,0.15); border: 1px solid rgba(217,119,6,0.35); }
+    .legend-item-blue { background: rgba(59,130,196,0.15); border: 1px solid rgba(59,130,196,0.35); }
+    .legend-score { font-size: 0.68rem; color: #a8c8e8; text-transform: uppercase; letter-spacing: 1.2px; margin-bottom: 0.3rem; }
+    .legend-title-red { font-family: 'Sora', sans-serif; font-size: 1rem; font-weight: 700; color: #f87171; margin-bottom: 0.4rem; }
+    .legend-title-orange { font-family: 'Sora', sans-serif; font-size: 1rem; font-weight: 700; color: #fbbf24; margin-bottom: 0.4rem; }
+    .legend-title-blue { font-family: 'Sora', sans-serif; font-size: 1rem; font-weight: 700; color: #93c5fd; margin-bottom: 0.4rem; }
+    .legend-desc { font-size: 0.78rem; color: #cbd5e1; line-height: 1.6; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -150,33 +160,27 @@ if search:
 # Map
 st.markdown('<div class="section-title">Pressure Map</div>', unsafe_allow_html=True)
 
-k1, k2, k3 = st.columns(3)
-k1.markdown("""
-<div style='background:#fff1f1;border:1px solid #fca5a5;border-left:4px solid #dc2626;border-radius:8px;padding:0.8rem 1rem;height:100%;min-height:110px'>
-<span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>Score 99–100</span><br>
-<span style='font-size:1rem;font-weight:700;color:#dc2626'>🔴 Critical Pressure</span><br>
-<span style='font-size:0.78rem;color:#4a6080'>Model predicts this suburb will be among Australia's highest construction activity zones next year. All key signals align — sustained population growth, strong building approval momentum, and consistent 20-year growth history.</span>
-</div>""", unsafe_allow_html=True)
-
-k2.markdown("""
-<div style='background:#fffbeb;border:1px solid #fcd34d;border-left:4px solid #d97706;border-radius:8px;padding:0.8rem 1rem;height:100%;min-height:110px'>
-<span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>Score 90–98</span><br>
-<span style='font-size:1rem;font-weight:700;color:#d97706'>🟡 High Pressure</span><br>
-<span style='font-size:0.78rem;color:#4a6080'>Most key indicators are elevated — strong population growth trend, above-average building approvals, and positive 20-year momentum. A surge is likely but one or two signals are not yet at peak levels.</span>
-</div>""", unsafe_allow_html=True)
-
-k3.markdown("""
-<div style='background:#eff6ff;border:1px solid #93c5fd;border-left:4px solid #2563a8;border-radius:8px;padding:0.8rem 1rem;height:100%;min-height:110px'>
-<span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>Score below 90</span><br>
-<span style='font-size:1rem;font-weight:700;color:#2563a8'>🔵 Moderate / Low</span><br>
-<span style='font-size:0.78rem;color:#4a6080'>Some growth indicators are present but the model does not have high confidence in a near-term surge. Population growth or approval activity may be inconsistent or below the threshold seen in high-pressure suburbs.</span>
-</div>""", unsafe_allow_html=True)
-
-st.markdown("<br>", unsafe_allow_html=True)
-st.markdown(
-    "<span style='font-size:0.82rem;color:#6b8cae'>Top 300 highest-pressure suburbs shown. Hover for details.</span>",
-    unsafe_allow_html=True
-)
+# Legend
+st.markdown("""
+<div class="legend-wrap">
+    <div class="legend-item legend-item-red">
+        <div class="legend-score">Score 99 – 100</div>
+        <div class="legend-title-red">🔴 Critical Pressure</div>
+        <div class="legend-desc">All signals align — sustained population growth, strong approval momentum, and consistent 20-year history. Model predicts this suburb will be among Australia's highest construction zones next year.</div>
+    </div>
+    <div class="legend-item legend-item-orange">
+        <div class="legend-score">Score 90 – 98</div>
+        <div class="legend-title-orange">🟡 High Pressure</div>
+        <div class="legend-desc">Most indicators are elevated — strong population trend, above-average approvals, and positive long-term momentum. A construction surge is likely, with one or two signals not yet at peak levels.</div>
+    </div>
+    <div class="legend-item legend-item-blue">
+        <div class="legend-score">Score below 90</div>
+        <div class="legend-title-blue">🔵 Moderate / Low</div>
+        <div class="legend-desc">Some growth signals present but model confidence is lower. Population growth or approval activity may be inconsistent or below the threshold seen in high-pressure suburbs.</div>
+    </div>
+</div>
+<p style='font-size:0.82rem;color:#6b8cae;margin-top:0.2rem'>Top 800 highest-pressure suburbs shown &nbsp;·&nbsp; Hover any marker for details</p>
+""", unsafe_allow_html=True)
 
 # Pydeck map
 map_data = results.dropna(subset=['lat', 'lon']).sort_values('pressure_score', ascending=False).head(800).copy()
