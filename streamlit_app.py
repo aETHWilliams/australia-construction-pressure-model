@@ -178,7 +178,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Pydeck map — colour coded by pressure score
+# Pydeck map
 map_data = results.dropna(subset=['lat', 'lon']).sort_values('pressure_score', ascending=False).head(300).copy()
 
 def score_to_color(score):
@@ -190,7 +190,8 @@ def score_to_color(score):
         return [37, 99, 168, 180]
 
 map_data['color'] = map_data['pressure_score'].apply(score_to_color)
-map_data['radius'] = map_data['pressure_score'].apply(lambda s: 1500 + (s / 100) * 3000)
+map_data['signal'] = map_data['pressure_score'].apply(lambda s: '🔴 Critical Pressure' if s >= 99 else '🟡 High Pressure' if s >= 90 else '🔵 Moderate / Low')
+map_data['radius'] = map_data['pressure_score'].apply(lambda s: 800 + (s / 100) * 1500)
 
 layer = pdk.Layer(
     'ScatterplotLayer',
@@ -205,7 +206,7 @@ layer = pdk.Layer(
 view = pdk.ViewState(latitude=-27.0, longitude=134.0, zoom=3.5, pitch=0)
 
 tooltip = {
-    "html": "<b>{sa2_name}</b> ({state})<br>Pressure Score: <b>{pressure_score}</b>/100<br>Pop Growth: {erp_change_pct}%<br>Growth Years: {years_of_growth}/22",
+    "html": "<b>{sa2_name}</b> ({state})<br><b>{signal}</b><br>Pressure Score: <b>{pressure_score}</b>/100<br>Pop Growth: {erp_change_pct}%<br>Growth Years: {years_of_growth}/22",
     "style": {
         "backgroundColor": "#1e3a5f",
         "color": "white",
