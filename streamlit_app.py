@@ -155,7 +155,7 @@ k1.markdown("""
 <div style='background:#fff1f1;border:1px solid #fca5a5;border-left:4px solid #dc2626;border-radius:8px;padding:0.8rem 1rem;height:100%;min-height:110px'>
 <span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>Score 99–100</span><br>
 <span style='font-size:1rem;font-weight:700;color:#dc2626'>🔴 Critical Pressure</span><br>
-<span style='font-size:0.78rem;color:#4a6080'>Model is highly confident this suburb will be in the top 25% of construction activity nationally. Multiple signals align — sustained population growth, high building approval momentum, and strong socioeconomic demand.</span>
+<span style='font-size:0.78rem;color:#4a6080'>Model predicts this suburb will be among Australia's highest construction activity zones next year. All key signals align — sustained population growth, strong building approval momentum, and consistent 20-year growth history.</span>
 </div>""", unsafe_allow_html=True)
 
 k2.markdown("""
