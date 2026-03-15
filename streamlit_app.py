@@ -179,7 +179,7 @@ st.markdown(
 )
 
 # Pydeck map
-map_data = results.dropna(subset=['lat', 'lon']).sort_values('pressure_score', ascending=False).head(300).copy()
+map_data = results.dropna(subset=['lat', 'lon']).sort_values('pressure_score', ascending=False).head(800).copy()
 
 def score_to_color(score):
     if score >= 99:
