@@ -50,12 +50,13 @@ st.markdown("""
 @st.cache_data
 def load_data():
     scores = pd.read_csv("aus_pressure_scores_v4.csv")
+    shap_df = pd.read_csv("https://raw.githubusercontent.com/aETHWilliams/australia-construction-pressure-model/main/shap_values_v4.csv")
     geo_url = "https://raw.githubusercontent.com/aETHWilliams/australia-construction-pressure-model/main/sa2_pressure.geojson"
     geojson = requests.get(geo_url).json()
-    return scores, geojson
+    return scores, shap_df, geojson
 
 
-results, geojson = load_data()
+results, shap_df, geojson = load_data()
 
 # Header
 st.markdown("""
@@ -148,7 +149,6 @@ for i, row in top10.iterrows():
     rows_html += f"<tr style='font-size:0.82rem;background:{bg};'><td style='padding:0.5rem 0.6rem;color:rgba(255,255,255,0.35);font-weight:600'>{rank}</td><td style='padding:0.5rem 0.6rem;color:#ffffff;font-weight:600'>{row['sa2_name']}</td><td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{row['state']}</td><td style='padding:0.5rem 0.6rem;color:{color};font-weight:700'>{score}</td><td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{row['erp_change_pct']}%</td><td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{int(row['years_of_growth'])}/22</td><td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{approvals}</td><td style='padding:0.5rem 0.6rem;color:{color}'>{signal}</td></tr>"
 
 html = f"""<div style='background:linear-gradient(135deg,#1e3a5f 0%,#2563a8 60%,#3b82c4 100%);border-radius:16px;padding:1.8rem 2rem;margin-bottom:2rem;box-shadow:0 4px 24px rgba(37,99,168,0.18);'><div style='font-family:Sora,sans-serif;font-size:1.2rem;font-weight:700;color:#ffffff;margin-bottom:0.2rem'>Top 10 Predicted Surge Suburbs — 2026/27</div><div style='font-size:0.78rem;color:#a8c8e8;margin-bottom:1.2rem'>Ranked by Construction Pressure Score &nbsp;·&nbsp; Based on 20 ML Features</div><table style='width:100%;border-collapse:collapse;'><tr style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid rgba(255,255,255,0.1);'><td style='padding:0.4rem 0.6rem'>#</td><td style='padding:0.4rem 0.6rem'>Suburb</td><td style='padding:0.4rem 0.6rem'>State</td><td style='padding:0.4rem 0.6rem'>Score</td><td style='padding:0.4rem 0.6rem'>Pop Growth</td><td style='padding:0.4rem 0.6rem'>Growth Yrs</td><td style='padding:0.4rem 0.6rem'>Approvals FYTD</td><td style='padding:0.4rem 0.6rem'>Signal</td></tr>{rows_html}</table></div>"""
-
 st.markdown(html, unsafe_allow_html=True)
 
 # Search
@@ -198,6 +198,41 @@ if search:
                             <span style='font-size:1.4rem;font-weight:700;color:#1e3a5f'>{row['state']}</span></div>
                     </div>
                 </div>""", unsafe_allow_html=True)
+
+                # SHAP explainer
+                shap_row = shap_df[shap_df['sa2_name'] == row['sa2_name']]
+                if len(shap_row) > 0:
+                    shap_vals = shap_row.drop(columns=['sa2_name']).iloc[0]
+                    top5 = shap_vals.abs().sort_values(ascending=False).head(5)
+                    top5_vals = shap_vals[top5.index]
+
+                    bars_html = ""
+                    max_val = top5.max()
+                    for feat, val in zip(top5.index, top5_vals):
+                        bar_pct = int(abs(val) / max_val * 100)
+                        direction = 'Pushes score up' if val > 0 else 'Pushes score down'
+                        bar_color = '#2563a8' if val > 0 else '#94a3b8'
+                        bars_html += f"""
+                        <div style='margin-bottom:0.7rem'>
+                            <div style='display:flex;justify-content:space-between;margin-bottom:0.2rem'>
+                                <span style='font-size:0.78rem;color:#1e3a5f;font-weight:500'>{feat}</span>
+                                <span style='font-size:0.72rem;color:#6b8cae'>{direction}</span>
+                            </div>
+                            <div style='background:#f0f4f8;border-radius:4px;height:8px;'>
+                                <div style='background:{bar_color};width:{bar_pct}%;height:8px;border-radius:4px;'></div>
+                            </div>
+                        </div>"""
+
+                    st.markdown(f"""
+                    <div class="stat-card" style='margin-top:0.5rem'>
+                        <div style='font-family:Sora,sans-serif;font-size:0.9rem;font-weight:600;color:#1e3a5f;margin-bottom:0.8rem'>
+                            🧠 Why did {row['sa2_name']} score {score}/100?
+                        </div>
+                        <div style='font-size:0.75rem;color:#6b8cae;margin-bottom:1rem'>
+                            Top 5 factors driving this suburb's pressure score — based on SHAP values from the XGBoost model
+                        </div>
+                        {bars_html}
+                    </div>""", unsafe_allow_html=True)
 
                 suburb_map = pd.DataFrame({'lat': [row['lat']], 'lon': [row['lon']]})
                 st.map(suburb_map, latitude=row['lat'], longitude=row['lon'], zoom=11)
