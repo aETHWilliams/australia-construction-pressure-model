@@ -135,7 +135,27 @@ filtered = filtered.sort_values("pressure_score", ascending=False)
 # Top 10
 top10 = results.sort_values('pressure_score', ascending=False).head(10).reset_index(drop=True)
 
-st.markdown("""
+rows_html = ""
+for i, row in top10.iterrows():
+    score = row['pressure_score']
+    rank = i + 1
+    color = '#f87171' if score >= 99 else '#fbbf24' if score >= 90 else '#93c5fd'
+    signal = '🔴 Critical' if score >= 99 else '🟡 High' if score >= 90 else '🔵 Moderate'
+    approvals = int(row['dwellings_2526_fytd']) if pd.notna(row['dwellings_2526_fytd']) else 'N/A'
+    bg = 'rgba(255,255,255,0.05)' if rank % 2 == 0 else 'transparent'
+    rows_html += f"""
+    <tr style='font-size:0.82rem;background:{bg};'>
+        <td style='padding:0.5rem 0.6rem;color:rgba(255,255,255,0.35);font-weight:600'>{rank}</td>
+        <td style='padding:0.5rem 0.6rem;color:#ffffff;font-weight:600'>{row['sa2_name']}</td>
+        <td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{row['state']}</td>
+        <td style='padding:0.5rem 0.6rem;color:{color};font-weight:700'>{score}</td>
+        <td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{row['erp_change_pct']}%</td>
+        <td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{int(row['years_of_growth'])}/22</td>
+        <td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{approvals}</td>
+        <td style='padding:0.5rem 0.6rem;color:{color}'>{signal}</td>
+    </tr>"""
+
+st.markdown(f"""
 <div style='background:linear-gradient(135deg,#1e3a5f 0%,#2563a8 60%,#3b82c4 100%);
 border-radius:16px;padding:1.8rem 2rem;margin-bottom:2rem;
 box-shadow:0 4px 24px rgba(37,99,168,0.18);'>
@@ -156,29 +176,10 @@ Ranked by Construction Pressure Score &nbsp;·&nbsp; Based on 20 ML Features
 <td style='padding:0.4rem 0.6rem'>Approvals FYTD</td>
 <td style='padding:0.4rem 0.6rem'>Signal</td>
 </tr>
+{rows_html}
+</table>
+</div>
 """, unsafe_allow_html=True)
-
-for i, row in top10.iterrows():
-    score = row['pressure_score']
-    rank = i + 1
-    color = '#f87171' if score >= 99 else '#fbbf24' if score >= 90 else '#93c5fd'
-    signal = '🔴 Critical' if score >= 99 else '🟡 High' if score >= 90 else '🔵 Moderate'
-    approvals = int(row['dwellings_2526_fytd']) if pd.notna(row['dwellings_2526_fytd']) else 'N/A'
-    bg = 'rgba(255,255,255,0.05)' if rank % 2 == 0 else 'transparent'
-    st.markdown(f"""
-    <tr style='font-size:0.82rem;background:{bg};'>
-        <td style='padding:0.5rem 0.6rem;color:rgba(255,255,255,0.35);font-weight:600'>{rank}</td>
-        <td style='padding:0.5rem 0.6rem;color:#ffffff;font-weight:600'>{row['sa2_name']}</td>
-        <td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{row['state']}</td>
-        <td style='padding:0.5rem 0.6rem;color:{color};font-weight:700'>{score}</td>
-        <td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{row['erp_change_pct']}%</td>
-        <td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{int(row['years_of_growth'])}/22</td>
-        <td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{approvals}</td>
-        <td style='padding:0.5rem 0.6rem;color:{color}'>{signal}</td>
-    </tr>
-    """, unsafe_allow_html=True)
-
-st.markdown("</table></div>", unsafe_allow_html=True)
 
 # Search
 st.markdown('<div class="section-title">Suburb Search</div>', unsafe_allow_html=True)
