@@ -38,14 +38,36 @@ st.markdown("""
 
 GITHUB = "https://raw.githubusercontent.com/aETHWilliams/australia-construction-pressure-model/main"
 
-@st.cache_data
+@st.cache_data(ttl=3600)
 def load_data():
-    scores = pd.read_csv(f"{GITHUB}/master_table_v8.csv")
+    scores = pd.read_csv(f"{GITHUB}/master_table_v8_ready.csv")
     shap_df = pd.read_csv(f"{GITHUB}/shap_values_v5.csv")
     geojson = requests.get(f"{GITHUB}/sa2_pressure_v5.geojson").json()
     return scores, shap_df, geojson
 
 results, shap_df, geojson = load_data()
+
+# ── Compute missing columns from v8 data ─────────────────────────────────────
+# Rank & pressure score derived from 2024-25 dwelling approvals
+results['national_rank'] = results['total_dwellings_2024-25'].rank(
+    ascending=False, method='min'
+).astype(int)
+
+results['pressure_score'] = (
+    results['total_dwellings_2024-25']
+    .rank(pct=True) * 100
+).round(1)
+
+results['signal'] = results['national_rank'].apply(
+    lambda r: 'Critical' if r <= 50 else ('High' if r <= 200 else 'Moderate')
+)
+
+# Merge lat/lon from coords file (match on sa2_name, fallback to sa2_code)
+if 'sa2_name' in coords.columns:
+    results = results.merge(coords[['sa2_name', 'lat', 'lon']], on='sa2_name', how='left')
+elif 'sa2_code' in coords.columns:
+    results = results.merge(coords[['sa2_code', 'lat', 'lon']], on='sa2_code', how='left')
+
 results['erp_change_pct'] = results['erp_change_pct'].round(1)
 results['dwellings_2526_fytd'] = results['dwellings_2526_fytd'].fillna(0).astype(int)
 
