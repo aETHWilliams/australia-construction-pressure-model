@@ -3,6 +3,7 @@ import pandas as pd
 import pydeck as pdk
 import json
 import requests
+import streamlit.components.v1 as components
 
 st.set_page_config(
     page_title="Australia Construction Pressure Index",
@@ -198,78 +199,69 @@ html = (
 st.markdown(html, unsafe_allow_html=True)
 
 # ── Prediction Explanation Box ────────────────────────────────────────────────
-st.markdown("""
-<div style='background:#ffffff;border:1px solid #dbe8f5;border-left:4px solid #2563a8;
-border-radius:12px;padding:1.6rem 2rem;margin-bottom:1.5rem;
+components.html("""
+<link href='https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Sora:wght@400;600;700&display=swap' rel='stylesheet'>
+<div style='font-family:Inter,sans-serif;background:#ffffff;border:1px solid #dbe8f5;border-left:4px solid #2563a8;
+border-radius:12px;padding:1.6rem 2rem;margin-bottom:0.5rem;
 box-shadow:0 2px 8px rgba(37,99,168,0.07);'>
 
-    <div style='font-family:Sora,sans-serif;font-size:1rem;font-weight:600;
-    color:#1e3a5f;margin-bottom:1rem'>
+    <div style='font-family:Sora,sans-serif;font-size:1rem;font-weight:600;color:#1e3a5f;margin-bottom:1rem'>
         How the 2026/27 Predictions Were Made
     </div>
 
     <div style='display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-bottom:1.2rem;'>
 
         <div style='background:#f7faff;border-radius:8px;padding:1rem 1.2rem;'>
-            <div style='font-size:0.68rem;color:#6b8cae;text-transform:uppercase;
-            letter-spacing:1px;margin-bottom:0.4rem'>Step 1 — Historical Training</div>
+            <div style='font-size:0.68rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.4rem'>Step 1 — Historical Training</div>
             <div style='font-size:0.82rem;color:#1a2332;line-height:1.7'>
                 Two ML models (XGBoost + Random Forest) were trained on
                 <b>2022–24 ABS building approval data</b> across all 2,442 suburbs.
-                The models learned which combination of signals historically preceded
-                a construction surge.
+                The models learned which combination of signals historically preceded a construction surge.
             </div>
         </div>
 
         <div style='background:#f7faff;border-radius:8px;padding:1rem 1.2rem;'>
-            <div style='font-size:0.68rem;color:#6b8cae;text-transform:uppercase;
-            letter-spacing:1px;margin-bottom:0.4rem'>Step 2 — Velocity Scoring</div>
+            <div style='font-size:0.68rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.4rem'>Step 2 — Velocity Scoring</div>
             <div style='font-size:0.82rem;color:#1a2332;line-height:1.7'>
                 v8 introduces <b>construction velocity features</b> — measuring the
-                <i>rate of acceleration</i> in population growth and approvals, not
-                just current levels. Suburbs transitioning from stable to rapidly
-                accelerating are ranked higher than those that have always been busy.
+                <i>rate of acceleration</i> in population growth and approvals, not just current levels.
+                Suburbs transitioning from stable to rapidly accelerating are ranked higher than those that have always been busy.
             </div>
         </div>
 
         <div style='background:#f7faff;border-radius:8px;padding:1rem 1.2rem;'>
-            <div style='font-size:0.68rem;color:#6b8cae;text-transform:uppercase;
-            letter-spacing:1px;margin-bottom:0.4rem'>Step 3 — Validation</div>
+            <div style='font-size:0.68rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.4rem'>Step 3 — Validation</div>
             <div style='font-size:0.82rem;color:#1a2332;line-height:1.7'>
                 Predictions were validated against <b>actual 2024–25 ABS results</b>
                 — data the model never saw during training. v8 achieved a
-                <b>Spearman rank correlation of 1.000</b> and correctly identified
-                <b>50 of the top 50</b> construction suburbs nationally.
+                <b>Spearman rank correlation of 1.000</b> and correctly identified <b>50 of the top 50</b> construction suburbs nationally.
             </div>
         </div>
 
     </div>
 
-    <div style='border-top:1px solid #dbe8f5;padding-top:1rem;
-    display:flex;gap:2rem;flex-wrap:wrap;'>
+    <div style='border-top:1px solid #dbe8f5;padding-top:1rem;display:flex;gap:2rem;flex-wrap:wrap;'>
         <div style='font-size:0.78rem;color:#4a6080;line-height:1.8;flex:1;'>
             <b style='color:#1e3a5f'>Why these suburbs for 2026/27?</b><br>
             Each suburb in the top 10 exhibits a distinct combination of signals —
             sustained population growth over 20+ years, above-average approval momentum,
             and strong velocity indicators suggesting the pipeline is still filling.
-            Greenfield estates like Mickleham and Rockbank show consistent high-volume
-            approvals year-on-year. Infill suburbs like Albert Park and Rhodes show
-            exceptional 2024-25 actual construction volumes that signal ongoing demand
-            for the next cycle. The model weights <i>momentum</i> over raw size —
-            a suburb accelerating from 500 to 2,000 approvals scores higher than one
-            that has been steady at 1,500 for a decade.
+            Greenfield estates like Mickleham and Rockbank show consistent high-volume approvals year-on-year.
+            Infill suburbs like Albert Park and Rhodes show exceptional 2024-25 actual construction volumes
+            that signal ongoing demand for the next cycle. The model weights <i>momentum</i> over raw size —
+            a suburb accelerating from 500 to 2,000 approvals scores higher than one that has been steady at 1,500 for a decade.
         </div>
         <div style='display:flex;gap:0.5rem;align-items:flex-start;flex-shrink:0;flex-wrap:wrap;padding-top:0.2rem'>
-            <span style='display:inline-block;background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>Spearman 1.000</span>
-            <span style='display:inline-block;background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>50/50 Top 50 Precision</span>
-            <span style='display:inline-block;background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>2,442 Suburbs</span>
-            <span style='display:inline-block;background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>7.3M Records</span>
-            <span style='display:inline-block;background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>No Data Leakage</span>
+            <span style='background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>Spearman 1.000</span>
+            <span style='background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>50/50 Top 50 Precision</span>
+            <span style='background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>2,442 Suburbs</span>
+            <span style='background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>7.3M Records</span>
+            <span style='background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>No Data Leakage</span>
         </div>
     </div>
 
 </div>
-""", unsafe_allow_html=True)
+""", height=340)
 
 # ── Suburb Search ─────────────────────────────────────────────────────────────
 st.markdown('<div class="section-title">Suburb Search</div>', unsafe_allow_html=True)
