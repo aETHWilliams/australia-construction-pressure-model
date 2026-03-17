@@ -149,7 +149,7 @@ filtered = results.copy()
 if selected != "All":
     filtered = filtered[filtered["state"] == selected]
 filtered = filtered[filtered["pressure_score"] >= min_score]
-filtered = filtered.sort_values("pressure_score", ascending=False)
+filtered = filtered.sort_values(["pressure_score", "national_rank"], ascending=[False, True])
 
 # ── Top 10 Table ──────────────────────────────────────────────────────────────
 top10 = results.sort_values('national_rank').head(10).reset_index(drop=True)
