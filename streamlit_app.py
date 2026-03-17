@@ -95,10 +95,10 @@ for col, (val, label) in zip([c1, c2, c3, c4, c5], metrics):
 st.markdown("<div style='margin-top: 2rem'></div>", unsafe_allow_html=True)
 
 # ── Sidebar ──────────────────────────────────────────────────────────────────
-selected = st.sidebar.selectbox("Filter by State", ["All", "NSW", "VIC", "QLD", "WA", "SA", "TAS", "ACT", "NT"])
-min_score = st.sidebar.slider("Minimum Pressure Score", 0, 100, 0)
+selected = "All"
+min_score = 0
 
-st.sidebar.markdown("---")
+st.sidebar.markdown("---") 
 
 st.sidebar.markdown("""
 <div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>What This App Does</div>
