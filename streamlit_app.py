@@ -72,7 +72,7 @@ def rank_to_map_color(rank):
 st.markdown("""
 <div class="header-wrap">
     <div class="header-title">Australia Construction Pressure Index</div>
-    <div class="header-sub">Predictive ML Model &nbsp;·&nbsp; 7.3M Records &nbsp;·&nbsp; 2,442 Suburbs Nationally &nbsp;·&nbsp; Model v8</div>
+    <div class="header-sub">Predictive ML Model &nbsp;·&nbsp; 7.3M Records &nbsp;·&nbsp; 2,442 Suburbs Nationally &nbsp;·&nbsp; Model v8 &nbsp;·&nbsp; By Ethan Williams</div>
 </div>
 """, unsafe_allow_html=True)
 
