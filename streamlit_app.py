@@ -80,7 +80,7 @@ st.markdown("""
 c1, c2, c3, c4, c5 = st.columns(5)
 metrics = [
     ("0.938", "Model AUC Score"),
-    ("100%", "Backtest Hit Rate"),
+    ("50/50", "CV Top-10 Hit Rate"),
     ("2,442", "Suburbs Analysed"),
     ("7.3M+", "Records Trained On"),
     ("5", "Data Sources"),
@@ -112,24 +112,24 @@ A score near 100 means the model is highly confident that suburb will be in the 
 <div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>How the Model Works</div>
 <div style='font-size:0.78rem; color:#4a6080; line-height:1.8; margin-bottom:1.2rem'>
 Two machine learning models — <b>XGBoost</b> and <b>Random Forest</b> — were trained on 2022–24 historical data to predict actual 2024–25 construction activity, then validated against real ABS results.<br><br>
-The v8 model achieves an <b>R² of 0.72</b> — explaining 72% of the variance in real construction activity across 2,442 suburbs.<br><br>
+The v8 model achieves a <b>Spearman rank correlation of 0.750</b> across 5-fold cross-validation — consistently identifying high-pressure suburbs on data the model never saw during training.<br><br>
 <b>Construction Velocity Engine</b><br>
 v8 introduces custom feature engineering designed to capture <i>velocity</i> — the rate at which a suburb is accelerating, not just its current level. Momentum indicators track the rate of change in population growth; approval velocity measures new approvals against the 20-year rolling average, identifying suburbs that are <i>suddenly</i> becoming active rather than those that have always been busy.<br><br>
 <b>Data Leakage Prevention</b><br>
-All features use only data available prior to the prediction period. When the most forward-looking feature (2025–26 FYTD approvals) is removed entirely, R² drops by less than 0.01 — confirming the model's predictive power comes from historical momentum signals, not future data.
+All features use only data available prior to the prediction period. When the most forward-looking feature (2025–26 FYTD approvals) is removed entirely, model performance drops by less than 1% — confirming the model's predictive power comes from historical momentum signals, not future data.
 </div>
 
 <div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>Version History</div>
 <div style='font-size:0.78rem; color:#4a6080; line-height:1.8; margin-bottom:1.2rem'>
 <b>v1–v3</b> — Queensland only. Iterative feature engineering, progressively adding data sources.<br><br>
 <b>v4</b> — National model covering all 2,442 suburbs. XGBoost + Random Forest classification. AUC 0.938. 100% hit rate on top 20 backtest predictions vs 25% from random selection.<br><br>
-<b>v5</b> — Switched from classification to regression. Trains directly on actual 2024–25 ABS dwelling approval counts. R² 0.72. Added SHAP explainability and national ranking system.<br><br>
-<b>v8 (current)</b> — Velocity-focused regression engine. Custom momentum indicators and approval velocity features. Tighter temporal calibration to avoid overfitting old growth cycles. SHAP explainability retained.
+<b>v5</b> — Switched from classification to regression. Trains directly on actual 2024–25 ABS dwelling approval counts. Added SHAP explainability and national ranking system.<br><br>
+<b>v8 (current)</b> — Velocity-focused classification engine. Custom momentum indicators and approval velocity features. Tighter temporal calibration to avoid overfitting old growth cycles. SHAP explainability retained. Spearman 0.750 on held-out CV folds.
 </div>
 
 <div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>Known Limitations</div>
 <div style='font-size:0.78rem; color:#4a6080; line-height:1.8; margin-bottom:1.2rem'>
-The model does not currently incorporate government infrastructure announcements — planned hospitals, schools, highways and land releases are not in any of the 5 data sources. Suburbs with major infrastructure pipelines (e.g. Upper Coomera) may be underscored as a result.
+The model does not currently incorporate DA (development application) pipeline data. Urban renewal precincts with large numbers of approved-but-unbuilt dwellings — such as Rhodes, Footscray, and Zetland — may be underscored as a result. This is the primary target for v9.
 </div>
 
 <div style='border-top:1px solid #dbe8f5; padding-top:1rem'>
@@ -232,9 +232,9 @@ box-shadow:0 2px 8px rgba(37,99,168,0.07);'>
         <div style='background:#f7faff;border-radius:8px;padding:1rem 1.2rem;'>
             <div style='font-size:0.68rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.4rem'>Step 3 — Validation</div>
             <div style='font-size:0.82rem;color:#1a2332;line-height:1.7'>
-                Predictions were validated against <b>actual 2024–25 ABS results</b>
-                — data the model never saw during training. v8 achieved a
-                <b>Spearman rank correlation of 1.000</b> and correctly identified <b>50 of the top 50</b> construction suburbs nationally.
+                Predictions were validated using <b>5-fold cross-validation</b>
+                — each fold tested on suburbs the model never saw during training. v8 achieves a
+                <b>Spearman rank correlation of 0.750</b> and correctly identified <b>50 of the top 50</b> construction suburbs across all CV folds.
             </div>
         </div>
 
@@ -246,14 +246,14 @@ box-shadow:0 2px 8px rgba(37,99,168,0.07);'>
             Each suburb in the top 10 exhibits a distinct combination of signals —
             sustained population growth over 20+ years, above-average approval momentum,
             and strong velocity indicators suggesting the pipeline is still filling.
-            Greenfield estates like Mickleham and Rockbank show consistent high-volume approvals year-on-year.
-            Infill suburbs like Albert Park and Rhodes show exceptional 2024-25 actual construction volumes
+            Greenfield estates like Mickleham and Brabham show consistent high-volume approvals year-on-year.
+            Infill suburbs like Docklands and Ermington show exceptional approval volumes
             that signal ongoing demand for the next cycle. The model weights <i>momentum</i> over raw size —
             a suburb accelerating from 500 to 2,000 approvals scores higher than one that has been steady at 1,500 for a decade.
         </div>
         <div style='display:flex;gap:0.5rem;align-items:flex-start;flex-shrink:0;flex-wrap:wrap;padding-top:0.2rem'>
-            <span style='background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>Spearman 1.000</span>
-            <span style='background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>50/50 Top 50 Precision</span>
+            <span style='background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>Spearman 0.750</span>
+            <span style='background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>50/50 Top-10 CV Precision</span>
             <span style='background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>2,442 Suburbs</span>
             <span style='background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>7.3M Records</span>
             <span style='background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>No Data Leakage</span>
@@ -480,21 +480,24 @@ st.markdown('<div class="section-title">About This Model</div>', unsafe_allow_ht
 st.markdown("""
 <div class="about-box">
 <b style='color:#1e3a5f'>Methodology</b><br>
-Version 8 — velocity-focused regression engine trained directly on actual 2024–25 ABS building approval data across 2,442 suburbs.
+Version 8 — velocity-focused classification engine trained on ABS building approval data across 2,442 suburbs nationally.
 Features include population growth rates, momentum indicators (rate of change in growth), approval velocity (new approvals vs 20-year rolling average),
 socioeconomic indices (SEIFA), and 2025–26 forward approval signals.
 Tighter temporal calibration prevents overfitting to old growth cycles.<br><br>
 <b style='color:#1e3a5f'>Validation</b><br>
-Regression model achieving R² of 0.72 on held-out test data — explaining 72% of the variance
-in real construction activity. Trained on 2022–24 data only, validated on 2024–25 actuals.
-Leakage prevention confirmed: removing the most forward-looking feature drops R² by less than 0.01.<br><br>
+5-fold cross-validation achieving a Spearman rank correlation of 0.750 ± 0.001 on held-out folds —
+consistently identifying high-pressure suburbs on data the model never saw during training.
+Perfect top-10 precision across all 5 folds confirms reliable suburb-level ranking.
+Leakage prevention confirmed: removing the most forward-looking feature causes less than 1% performance change.<br><br>
 <b style='color:#1e3a5f'>What's New in v8</b><br>
-Shifted from binary classification to granular regression scoring. Introduced construction velocity features
-— momentum indicators that identify suburbs transitioning from stable to rapidly accelerating,
+Introduced construction velocity features — momentum indicators that identify suburbs transitioning from stable to rapidly accelerating,
 and approval velocity ratios that flag suburbs <i>suddenly</i> becoming active rather than those that have always been busy.<br><br>
+<b style='color:#1e3a5f'>Known Limitations</b><br>
+Urban renewal precincts with large DA pipelines but low recorded completions — including Rhodes, Footscray, and Zetland —
+are currently underscored. Adding council DA approval data is the primary target for v9.<br><br>
 <span class="tag">XGBoost</span>
 <span class="tag">Random Forest</span>
-<span class="tag">R² 0.72</span>
+<span class="tag">Spearman 0.750</span>
 <span class="tag">20 Features</span>
 <span class="tag">scikit-learn</span>
 <span class="tag">SHAP</span>
