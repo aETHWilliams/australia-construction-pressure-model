@@ -41,8 +41,8 @@ GITHUB = "https://raw.githubusercontent.com/aETHWilliams/australia-construction-
 
 @st.cache_data(ttl=3600)
 def load_data():
-    scores = pd.read_csv(f"{GITHUB}/master_table_v8_ready.csv")
-    shap_df = pd.read_csv(f"{GITHUB}/shap_values_v5.csv")
+    scores = pd.read_csv(f"{GITHUB}/master_table_v9_app.csv")
+    shap_df = pd.DataFrame()  # SHAP coming in v10
     geojson = requests.get(f"{GITHUB}/sa2_pressure_v5.geojson").json()
     return scores, shap_df, geojson
 
@@ -72,18 +72,18 @@ def rank_to_map_color(rank):
 st.markdown("""
 <div class="header-wrap">
     <div class="header-title">Australia Construction Pressure Index</div>
-    <div class="header-sub">Predictive ML Model &nbsp;·&nbsp; 7.3M Records &nbsp;·&nbsp; 2,442 Suburbs Nationally &nbsp;·&nbsp; Model v8 &nbsp;·&nbsp; By Ethan Williams</div>
+    <div class="header-sub">Predictive ML Model &nbsp;·&nbsp; 7.3M Records &nbsp;·&nbsp; 2,442 Suburbs Nationally &nbsp;·&nbsp; Model v9 &nbsp;·&nbsp; By Ethan Williams</div>
 </div>
 """, unsafe_allow_html=True)
 
 # ── Metrics ──────────────────────────────────────────────────────────────────
 c1, c2, c3, c4, c5 = st.columns(5)
 metrics = [
-    ("0.938", "Model AUC Score"),
-    ("50/50", "CV Top-10 Hit Rate"),
+    ("0.923", "CV Spearman"),
+    ("611", "High Pressure Suburbs"),
     ("2,442", "Suburbs Analysed"),
     ("7.3M+", "Records Trained On"),
-    ("5", "Data Sources"),
+    ("6", "Data Sources"),
 ]
 for col, (val, label) in zip([c1, c2, c3, c4, c5], metrics):
     col.markdown(f"""
@@ -127,7 +127,8 @@ All features use only data available prior to the prediction period. When the mo
 
 <div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>Known Limitations</div>
 <div style='font-size:0.78rem; color:#4a6080; line-height:1.8; margin-bottom:1.2rem'>
-The model does not currently incorporate DA (development application) pipeline data. Urban renewal precincts with large numbers of approved-but-unbuilt dwellings — such as Rhodes, Footscray, and Zetland — may be underscored as a result. This is the primary target for v9.
+The model does not currently incorporate DA (development application) pipeline data. Urban renewal precincts with large DA pipelines are now captured via the pipeline pressure feature (ABS Table 80).
+Footscray ranks #11, Brunswick #6, Wollongong #14 nationally. Saturation index for fully built-out suburbs is the primary target for v10.
 </div>
 
 <div style='border-top:1px solid #dbe8f5; padding-top:1rem'>
@@ -180,7 +181,7 @@ html = (
     "<div style='font-family:Sora,sans-serif;font-size:1.2rem;font-weight:700;color:#ffffff;margin-bottom:0.2rem'>"
     "Top 10 Predicted Surge Suburbs — 2026/27</div>"
     "<div style='font-size:0.78rem;color:#a8c8e8;margin-bottom:1.2rem'>"
-    "Ranked by National Construction Pressure Rank &nbsp;·&nbsp; Based on 20 ML Features &nbsp;·&nbsp; Model v8</div>"
+    "Ranked by National Construction Pressure Rank &nbsp;·&nbsp; "Based on 35 ML Features &nbsp;·&nbsp; Model v9</div>"
     "<table style='width:100%;border-collapse:collapse;'>"
     "<tr style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1px;"
     "border-bottom:1px solid rgba(255,255,255,0.1);'>"
@@ -250,7 +251,7 @@ box-shadow:0 2px 8px rgba(37,99,168,0.07);'>
             a suburb accelerating from 500 to 2,000 approvals scores higher than one that has been steady at 1,500 for a decade.
         </div>
         <div style='display:flex;gap:0.5rem;align-items:flex-start;flex-shrink:0;flex-wrap:wrap;padding-top:0.2rem'>
-            <span style='background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>Spearman 0.750</span>
+            <span style='background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>Spearman 0.923</span>
             <span style='background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>50/50 Top-10 CV Precision</span>
             <span style='background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>2,442 Suburbs</span>
             <span style='background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>7.3M Records</span>
@@ -262,6 +263,54 @@ box-shadow:0 2px 8px rgba(37,99,168,0.07);'>
 """, height=340)
 
 # ── Suburb Search ─────────────────────────────────────────────────────────────
+# ── Why These Top 10 ──────────────────────────────────────────────────────────
+st.markdown('<div class="section-title">Why These Suburbs Ranked #1–10</div>', unsafe_allow_html=True)
+
+top10_explain = results.sort_values('national_rank').head(10).reset_index(drop=True)
+
+explanations = {
+    'Whittlesea': "22 consecutive years of growth, massive greenfield land release pipeline, and strong overseas migration into Melbourne's northern corridor. Infrastructure consistently lagging demand.",
+    'Macquarie Park - Marsfield': "Sydney's highest urban renewal score in the top 10. Major rezoning uplift, university precinct demand, and approval pipeline surging in 2024-25.",
+    'Greenbank - North Maclean': "Masterplanned community in Logan's growth corridor. 22 years of growth, large lot approvals pipeline, and SEQ interstate migration pressure.",
+    'Mandurah - North': "WA's housing surge. Population rebound, rental crisis driving build pressure, and one of Perth's fastest-growing fringe corridors.",
+    'Fremantle': "Highest urban renewal score in WA top suburbs. Inner-city infill transformation, strong overseas migration, and constrained land supply driving persistent pressure.",
+    'Brunswick - South': "Melbourne inner-city infill zone with 20 years of consecutive growth. High density rezoning, strong rental demand, and approval pipeline accelerating in 2024-25.",
+    'Baldivis - North': "Perth's southern growth corridor. Greenfield estate releases, infrastructure lag, and population surge driven by WA's resource sector recovery.",
+    'Sunbury - South': "Melbourne's northwest growth frontier. 22 years of growth, large land releases, and proximity to employment corridors driving sustained approval momentum.",
+    'Munno Para West - Angle Vale': "Adelaide's fastest-growing northern corridor. Often overlooked nationally but one of Australia's strongest greenfield pressure zones by approval volume.",
+    'Hope Island': "Gold Coast's premium growth node. 22 consecutive growth years, constrained canal-front supply, and strong interstate migration from NSW and VIC.",
+}
+
+cards_html = "<div style='display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;margin-bottom:2rem;'>"
+for i, row in top10_explain.iterrows():
+    name = row['sa2_name']
+    rank = int(row['national_rank'])
+    score = row['pressure_score']
+    state = row['state']
+    years = int(row['years_of_growth'])
+    urban = round(row['urban_renewal_score'], 2)
+    explanation = explanations.get(name, "Strong combination of population growth, approval momentum, and pipeline pressure signals.")
+    color = '#dc2626' if rank <= 3 else '#d97706' if rank <= 6 else '#2563a8'
+    cards_html += f"""
+    <div style='background:#ffffff;border:1px solid #dbe8f5;border-left:4px solid {color};
+    border-radius:10px;padding:1.2rem 1.4rem;box-shadow:0 2px 8px rgba(37,99,168,0.07);'>
+        <div style='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.6rem;'>
+            <div>
+                <span style='font-family:Sora,sans-serif;font-size:1rem;font-weight:700;color:#1e3a5f'>#{rank} {name}</span>
+                <span style='font-size:0.78rem;color:#6b8cae;margin-left:0.4rem'>{state}</span>
+            </div>
+            <span style='font-size:1.1rem;font-weight:700;color:{color}'>{score}/100</span>
+        </div>
+        <div style='font-size:0.82rem;color:#4a6080;line-height:1.7;margin-bottom:0.8rem'>{explanation}</div>
+        <div style='display:flex;gap:0.5rem;flex-wrap:wrap;'>
+            <span style='background:#e8f0fb;color:#2563a8;font-size:0.7rem;font-weight:500;padding:0.15rem 0.5rem;border-radius:20px'>{years}/22 growth years</span>
+            <span style='background:#e8f0fb;color:#2563a8;font-size:0.7rem;font-weight:500;padding:0.15rem 0.5rem;border-radius:20px'>Urban renewal {urban}</span>
+            <span style='background:#e8f0fb;color:#2563a8;font-size:0.7rem;font-weight:500;padding:0.15rem 0.5rem;border-radius:20px'>{state}</span>
+        </div>
+    </div>"""
+cards_html += "</div>"
+st.markdown(cards_html, unsafe_allow_html=True)
+
 st.markdown('<div class="section-title">Suburb Search</div>', unsafe_allow_html=True)
 search = st.text_input("Suburb Search", label_visibility="collapsed", placeholder="Search any suburb — e.g. Ripley, Mickleham, Wollert...")
 if search:
@@ -483,7 +532,7 @@ Features include population growth rates, momentum indicators (rate of change in
 socioeconomic indices (SEIFA), and 2025–26 forward approval signals.
 Tighter temporal calibration prevents overfitting to old growth cycles.<br><br>
 <b style='color:#1e3a5f'>Validation</b><br>
-5-fold cross-validation achieving a Spearman rank correlation of 0.750 ± 0.001 on held-out folds —
+5-fold cross-validation achieving a Spearman rank correlation of 0.923 ± 0.013 on held-out folds —
 consistently identifying high-pressure suburbs on data the model never saw during training.
 Perfect top-10 precision across all 5 folds confirms reliable suburb-level ranking.
 Leakage prevention confirmed: removing the most forward-looking feature causes less than 1% performance change.<br><br>
