@@ -181,7 +181,7 @@ html = (
     "<div style='font-family:Sora,sans-serif;font-size:1.2rem;font-weight:700;color:#ffffff;margin-bottom:0.2rem'>"
     "Top 10 Predicted Surge Suburbs — 2026/27</div>"
     "<div style='font-size:0.78rem;color:#a8c8e8;margin-bottom:1.2rem'>"
-    "Ranked by National Construction Pressure Rank &nbsp;·&nbsp; "Based on 35 ML Features &nbsp;·&nbsp; Model v9</div>"
+    "Ranked by National Construction Pressure Rank &nbsp;·&nbsp; Based on 35 ML Features &nbsp;·&nbsp; Model v9</div>"
     "<table style='width:100%;border-collapse:collapse;'>"
     "<tr style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1px;"
     "border-bottom:1px solid rgba(255,255,255,0.1);'>"
