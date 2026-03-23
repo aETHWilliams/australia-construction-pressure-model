@@ -149,11 +149,11 @@ ABS Building Activity Table 80 (8752.0)
 
 # ── Tab Navigation ────────────────────────────────────────────────────────────
 tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "🏆 Top Rankings", 
-    "📊 v9 vs v10 Comparison", 
-    "🗺️ SA4 Regional View",
-    "🔍 Suburb Search", 
-    "🗺️ Pressure Map"
+    "Top Rankings", 
+    "v9 vs v10 Comparison", 
+    "SA4 Regional View",
+    "Suburb Search", 
+    "Pressure Map"
 ])
 
 # ═══════════════════════════════════════════════════════════════════════════════
@@ -289,7 +289,7 @@ with tab2:
     col_up, col_down = st.columns(2)
 
     with col_up:
-        st.markdown('<div class="section-title">📈 Biggest Risers (v9 → v10)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Biggest Risers (v9 to v10)</div>', unsafe_allow_html=True)
         risers = v10_compare.sort_values('rank_change', ascending=False).head(15)
         fig_up = go.Figure(go.Bar(
             x=risers['rank_change'],
@@ -312,7 +312,7 @@ with tab2:
         st.plotly_chart(fig_up, use_container_width=True)
 
     with col_down:
-        st.markdown('<div class="section-title">📉 Biggest Fallers (Saturation Penalised)</div>', unsafe_allow_html=True)
+        st.markdown('<div class="section-title">Biggest Fallers (Saturation Penalised)</div>', unsafe_allow_html=True)
         fallers = v10_compare.sort_values('rank_change').head(15)
         fig_down = go.Figure(go.Bar(
             x=fallers['rank_change'].abs(),
@@ -335,7 +335,7 @@ with tab2:
         st.plotly_chart(fig_down, use_container_width=True)
 
     # Blind spots fixed
-    st.markdown('<div class="section-title">🔭 Blind Spots Fixed in v9 (Now Correctly Identified)</div>', unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Blind Spots Fixed in v9 (Now Correctly Identified)</div>', unsafe_allow_html=True)
 
     blind_spots = [
         {'Suburb': 'Footscray', 'State': 'VIC', 'v8 Rank': 'Outside top 200', 'v9 Rank': '#11', 'v10 Rank': None, 'Urban Renewal Score': 2.93},
@@ -396,12 +396,17 @@ with tab3:
     """, unsafe_allow_html=True)
 
     # Load SA4 rollup
-    @st.cache_data(ttl=3600)
-    def load_sa4():
-        return pd.read_csv(f"{GITHUB}/sa4_rollup_v9.csv")
-
-    try:
-        sa4 = load_sa4()
+    # Build SA4 rollup on the fly from v10
+    sa4 = v10.groupby(['sa4_name', 'state']).agg(
+        suburb_count=('sa2_name', 'count'),
+        high_pressure_count=('high_pressure_v9', 'sum'),
+        avg_composite_score=('v10_score', 'mean'),
+        max_composite_score=('v10_score', 'max'),
+        top_suburb=('sa2_name', lambda x: x.loc[v10.loc[x.index, 'v10_score'].idxmax()]),
+    ).reset_index()
+    sa4['sa4_rank'] = sa4['avg_composite_score'].rank(ascending=False).astype(int)
+    sa4['high_pressure_pct'] = (sa4['high_pressure_count'] / sa4['suburb_count'] * 100).round(1)
+    sa4 = sa4.sort_values('sa4_rank')
 
         # Top 20 SA4 bar chart
         top20_sa4 = sa4.sort_values('sa4_rank').head(20)
@@ -483,9 +488,6 @@ with tab3:
         sa4_display.columns = ['Rank','SA4 Region','State','Avg Score','% High Pressure','Suburbs','Top Suburb']
         sa4_display['Avg Score'] = sa4_display['Avg Score'].round(2)
         st.dataframe(sa4_display, use_container_width=True, height=480, hide_index=True)
-
-    except Exception as e:
-        st.warning(f"SA4 data not yet on GitHub. Upload sa4_rollup_v9.csv to your repo. ({e})")
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TAB 4 — SUBURB SEARCH
