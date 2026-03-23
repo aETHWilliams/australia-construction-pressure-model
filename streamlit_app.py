@@ -408,86 +408,86 @@ with tab3:
     sa4['high_pressure_pct'] = (sa4['high_pressure_count'] / sa4['suburb_count'] * 100).round(1)
     sa4 = sa4.sort_values('sa4_rank')
 
-        # Top 20 SA4 bar chart
-        top20_sa4 = sa4.sort_values('sa4_rank').head(20)
+    # Top 20 SA4 bar chart
+    top20_sa4 = sa4.sort_values('sa4_rank').head(20)
 
-        fig_sa4 = go.Figure()
-        fig_sa4.add_trace(go.Bar(
-            y=top20_sa4['sa4_name'] + ' (' + top20_sa4['state'] + ')',
-            x=top20_sa4['avg_composite_score'],
+    fig_sa4 = go.Figure()
+    fig_sa4.add_trace(go.Bar(
+        y=top20_sa4['sa4_name'] + ' (' + top20_sa4['state'] + ')',
+        x=top20_sa4['avg_composite_score'],
+        orientation='h',
+        marker=dict(
+            color=top20_sa4['high_pressure_pct'],
+            colorscale='Blues',
+            showscale=True,
+            colorbar=dict(title='% High Pressure'),
+        ),
+        text=top20_sa4['top_suburb'],
+        textposition='outside',
+        hovertemplate='<b>%{y}</b><br>Avg Score: %{x:.2f}<br>Top suburb: %{text}<extra></extra>',
+    ))
+    fig_sa4.update_layout(
+        title='Top 20 SA4 Regions by Average Pressure Score',
+        xaxis_title='Average Composite Score',
+        yaxis=dict(autorange='reversed'),
+        height=560,
+        plot_bgcolor='#f7faff',
+        paper_bgcolor='#ffffff',
+        font=dict(family='Inter', size=12, color='#1a2332'),
+        margin=dict(l=20, r=120, t=50, b=20),
+    )
+    st.plotly_chart(fig_sa4, use_container_width=True)
+
+    # High pressure % by SA4
+    col_a, col_b = st.columns(2)
+    with col_a:
+        st.markdown('<div class="section-title">% High Pressure Suburbs by Region</div>', unsafe_allow_html=True)
+        top15_pct = sa4.sort_values('high_pressure_pct', ascending=False).head(15)
+        fig_pct = px.bar(
+            top15_pct,
+            x='high_pressure_pct',
+            y='sa4_name',
             orientation='h',
-            marker=dict(
-                color=top20_sa4['high_pressure_pct'],
-                colorscale='Blues',
-                showscale=True,
-                colorbar=dict(title='% High Pressure'),
-            ),
-            text=top20_sa4['top_suburb'],
-            textposition='outside',
-            hovertemplate='<b>%{y}</b><br>Avg Score: %{x:.2f}<br>Top suburb: %{text}<extra></extra>',
-        ))
-        fig_sa4.update_layout(
-            title='Top 20 SA4 Regions by Average Pressure Score',
-            xaxis_title='Average Composite Score',
-            yaxis=dict(autorange='reversed'),
-            height=560,
-            plot_bgcolor='#f7faff',
-            paper_bgcolor='#ffffff',
-            font=dict(family='Inter', size=12, color='#1a2332'),
-            margin=dict(l=20, r=120, t=50, b=20),
+            color='high_pressure_pct',
+            color_continuous_scale='Reds',
+            labels={'high_pressure_pct': '% High Pressure', 'sa4_name': 'SA4 Region'},
         )
-        st.plotly_chart(fig_sa4, use_container_width=True)
+        fig_pct.update_layout(
+            height=420, plot_bgcolor='#f7faff', paper_bgcolor='#ffffff',
+            font=dict(family='Inter', size=11), showlegend=False,
+            yaxis=dict(autorange='reversed'),
+            margin=dict(l=10, r=20, t=20, b=20),
+            coloraxis_showscale=False,
+        )
+        st.plotly_chart(fig_pct, use_container_width=True)
 
-        # High pressure % by SA4
-        col_a, col_b = st.columns(2)
-        with col_a:
-            st.markdown('<div class="section-title">% High Pressure Suburbs by Region</div>', unsafe_allow_html=True)
-            top15_pct = sa4.sort_values('high_pressure_pct', ascending=False).head(15)
-            fig_pct = px.bar(
-                top15_pct,
-                x='high_pressure_pct',
-                y='sa4_name',
-                orientation='h',
-                color='high_pressure_pct',
-                color_continuous_scale='Reds',
-                labels={'high_pressure_pct': '% High Pressure', 'sa4_name': 'SA4 Region'},
-            )
-            fig_pct.update_layout(
-                height=420, plot_bgcolor='#f7faff', paper_bgcolor='#ffffff',
-                font=dict(family='Inter', size=11), showlegend=False,
-                yaxis=dict(autorange='reversed'),
-                margin=dict(l=10, r=20, t=20, b=20),
-                coloraxis_showscale=False,
-            )
-            st.plotly_chart(fig_pct, use_container_width=True)
+    with col_b:
+        st.markdown('<div class="section-title">Suburb Count by SA4 Region</div>', unsafe_allow_html=True)
+        top15_count = sa4.sort_values('suburb_count', ascending=False).head(15)
+        fig_count = px.bar(
+            top15_count,
+            x='suburb_count',
+            y='sa4_name',
+            orientation='h',
+            color='avg_composite_score',
+            color_continuous_scale='Blues',
+            labels={'suburb_count': 'Suburbs', 'sa4_name': 'SA4 Region'},
+        )
+        fig_count.update_layout(
+            height=420, plot_bgcolor='#f7faff', paper_bgcolor='#ffffff',
+            font=dict(family='Inter', size=11), showlegend=False,
+            yaxis=dict(autorange='reversed'),
+            margin=dict(l=10, r=20, t=20, b=20),
+            coloraxis_showscale=False,
+        )
+        st.plotly_chart(fig_count, use_container_width=True)
 
-        with col_b:
-            st.markdown('<div class="section-title">Suburb Count by SA4 Region</div>', unsafe_allow_html=True)
-            top15_count = sa4.sort_values('suburb_count', ascending=False).head(15)
-            fig_count = px.bar(
-                top15_count,
-                x='suburb_count',
-                y='sa4_name',
-                orientation='h',
-                color='avg_composite_score',
-                color_continuous_scale='Blues',
-                labels={'suburb_count': 'Suburbs', 'sa4_name': 'SA4 Region'},
-            )
-            fig_count.update_layout(
-                height=420, plot_bgcolor='#f7faff', paper_bgcolor='#ffffff',
-                font=dict(family='Inter', size=11), showlegend=False,
-                yaxis=dict(autorange='reversed'),
-                margin=dict(l=10, r=20, t=20, b=20),
-                coloraxis_showscale=False,
-            )
-            st.plotly_chart(fig_count, use_container_width=True)
-
-        # Full SA4 table
-        st.markdown('<div class="section-title">Full SA4 Rankings Table</div>', unsafe_allow_html=True)
-        sa4_display = sa4[['sa4_rank','sa4_name','state','avg_composite_score','high_pressure_pct','suburb_count','top_suburb']].copy()
-        sa4_display.columns = ['Rank','SA4 Region','State','Avg Score','% High Pressure','Suburbs','Top Suburb']
-        sa4_display['Avg Score'] = sa4_display['Avg Score'].round(2)
-        st.dataframe(sa4_display, use_container_width=True, height=480, hide_index=True)
+    # Full SA4 table
+    st.markdown('<div class="section-title">Full SA4 Rankings Table</div>', unsafe_allow_html=True)
+    sa4_display = sa4[['sa4_rank','sa4_name','state','avg_composite_score','high_pressure_pct','suburb_count','top_suburb']].copy()
+    sa4_display.columns = ['Rank','SA4 Region','State','Avg Score','% High Pressure','Suburbs','Top Suburb']
+    sa4_display['Avg Score'] = sa4_display['Avg Score'].round(2)
+    st.dataframe(sa4_display, use_container_width=True, height=480, hide_index=True)
 
 # ═══════════════════════════════════════════════════════════════════════════════
 # TAB 4 — SUBURB SEARCH
