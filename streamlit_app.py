@@ -1,13 +1,14 @@
 import streamlit as st
 import pandas as pd
 import pydeck as pdk
-import json
 import requests
 import streamlit.components.v1 as components
+import plotly.graph_objects as go
+import plotly.express as px
 
 st.set_page_config(
     page_title="Australia Construction Pressure Index",
-    page_icon="",
+    page_icon="🏗️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -34,6 +35,8 @@ st.markdown("""
     .about-box { background: #ffffff; border: 1px solid #dbe8f5; border-left: 4px solid #2563a8; border-radius: 10px; padding: 1.5rem; font-size: 0.88rem; color: #4a6080; line-height: 1.9; box-shadow: 0 2px 8px rgba(37,99,168,0.05); }
     .stTextInput input { background: #ffffff !important; border: 1px solid #dbe8f5 !important; color: #1a2332 !important; border-radius: 8px !important; }
     .tag { display: inline-block; background: #e8f0fb; color: #2563a8; font-size: 0.72rem; font-weight: 500; padding: 0.2rem 0.6rem; border-radius: 20px; margin-right: 0.3rem; }
+    .version-badge-v9 { display: inline-block; background: #fef3c7; color: #92400e; font-size: 0.7rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 20px; margin-left: 0.4rem; }
+    .version-badge-v10 { display: inline-block; background: #dcfce7; color: #166534; font-size: 0.7rem; font-weight: 600; padding: 0.15rem 0.5rem; border-radius: 20px; margin-left: 0.4rem; }
 </style>
 """, unsafe_allow_html=True)
 
@@ -42,15 +45,25 @@ GITHUB = "https://raw.githubusercontent.com/aETHWilliams/australia-construction-
 @st.cache_data(ttl=3600)
 def load_data():
     scores = pd.read_csv(f"{GITHUB}/master_table_v9_app.csv")
-    shap_df = pd.DataFrame()  # SHAP coming in v10
+    v10 = pd.read_csv(f"{GITHUB}/master_table_v10_ready.csv")
     geojson = requests.get(f"{GITHUB}/sa2_pressure_v5.geojson").json()
-    return scores, shap_df, geojson
+    return scores, v10, geojson
 
-results, shap_df, geojson = load_data()
+results, v10, geojson = load_data()
 
-# master_table_v8_ready.csv already has all required columns pre-computed
 results['erp_change_pct'] = results['erp_change_pct'].round(1)
 results['dwellings_2526_fytd'] = results['dwellings_2526_fytd'].fillna(0).astype(int)
+
+# Parse SHAP drivers from v10 top_3_drivers column into separate columns
+def parse_top_driver(drivers_str, n=0):
+    try:
+        parts = str(drivers_str).split(' | ')
+        if n < len(parts):
+            feat, val = parts[n].rsplit(':', 1)
+            return feat.strip(), float(val.strip())
+    except:
+        pass
+    return None, 0.0
 
 def rank_to_color(rank):
     if rank <= 50:
@@ -68,22 +81,22 @@ def rank_to_map_color(rank):
     else:
         return [37, 99, 168, 140]
 
-# ── Header ──────────────────────────────────────────────────────────────────
+# ── Header ───────────────────────────────────────────────────────────────────
 st.markdown("""
 <div class="header-wrap">
     <div class="header-title">Australia Construction Pressure Index</div>
-    <div class="header-sub">Predictive ML Model &nbsp;·&nbsp; 7.3M Records &nbsp;·&nbsp; 2,442 Suburbs Nationally &nbsp;·&nbsp; Model v9 &nbsp;·&nbsp; By Ethan Williams</div>
+    <div class="header-sub">Predictive ML Model &nbsp;·&nbsp; 7.3M Records &nbsp;·&nbsp; 2,442 Suburbs Nationally &nbsp;·&nbsp; Model v10 &nbsp;·&nbsp; By Ethan Williams</div>
 </div>
 """, unsafe_allow_html=True)
 
-# ── Metrics ──────────────────────────────────────────────────────────────────
+# ── Metrics ───────────────────────────────────────────────────────────────────
 c1, c2, c3, c4, c5 = st.columns(5)
 metrics = [
     ("0.923", "CV Spearman"),
     ("611", "High Pressure Suburbs"),
     ("2,442", "Suburbs Analysed"),
-    ("7.3M+", "Records Trained On"),
-    ("6", "Data Sources"),
+    ("88", "SA4 Regions Ranked"),
+    ("7", "Data Sources"),
 ]
 for col, (val, label) in zip([c1, c2, c3, c4, c5], metrics):
     col.markdown(f"""
@@ -94,41 +107,30 @@ for col, (val, label) in zip([c1, c2, c3, c4, c5], metrics):
 
 st.markdown("<div style='margin-top: 2rem'></div>", unsafe_allow_html=True)
 
-# ── Sidebar ──────────────────────────────────────────────────────────────────
-selected = "All"
-min_score = 0
-
+# ── Sidebar ───────────────────────────────────────────────────────────────────
 st.sidebar.markdown("""
 <div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>What This App Does</div>
 <div style='font-size:0.78rem; color:#4a6080; line-height:1.8; margin-bottom:1.2rem'>
 This tool predicts which Australian suburbs are likely to experience a construction boom <b>before it happens</b>.
-It analyses 20 signals per suburb — population growth, building approval history, socioeconomic data, and forward-looking 2025–26 approvals —
-and assigns every suburb a <b>Pressure Score from 0 to 100</b>.<br><br>
-A score near 100 means the model is highly confident that suburb will be in the top tier of construction activity nationally.
+It analyses signals per suburb — population growth, building approval history, socioeconomic data,
+pipeline backlogs, and forward-looking 2025–26 approvals — and assigns every suburb a <b>Pressure Score</b>.
 </div>
 
-<div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>How the Model Works</div>
+<div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>v10 Improvements</div>
 <div style='font-size:0.78rem; color:#4a6080; line-height:1.8; margin-bottom:1.2rem'>
-Two machine learning models — <b>XGBoost</b> and <b>Random Forest</b> — were trained on 2022–24 historical data to predict actual 2024–25 construction activity, then validated against real ABS results.<br><br>
-The v8 model achieves a <b>Spearman rank correlation of 0.750</b> across 5-fold cross-validation — consistently identifying high-pressure suburbs on data the model never saw during training.<br><br>
-<b>Construction Velocity Engine</b><br>
-v8 introduces custom feature engineering designed to capture <i>velocity</i> — the rate at which a suburb is accelerating, not just its current level. Momentum indicators track the rate of change in population growth; approval velocity measures new approvals against the 20-year rolling average, identifying suburbs that are <i>suddenly</i> becoming active rather than those that have always been busy.<br><br>
-<b>Data Leakage Prevention</b><br>
-All features use only data available prior to the prediction period. When the most forward-looking feature (2025–26 FYTD approvals) is removed entirely, model performance drops by less than 1% — confirming the model's predictive power comes from historical momentum signals, not future data.
+<b>Saturation Index</b> — fully built-out suburbs are now penalised using a dwellings-per-capita proxy, fixing overscoring of dense inner suburbs.<br><br>
+<b>SHAP Score Decomposition</b> — every suburb's score is now broken into its component drivers, showing exactly why it ranked where it did.<br><br>
+<b>SA4 Rollup</b> — suburb scores are aggregated to regional SA4 level, enabling macro-level analysis alongside suburb detail.
 </div>
 
 <div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>Version History</div>
 <div style='font-size:0.78rem; color:#4a6080; line-height:1.8; margin-bottom:1.2rem'>
-<b>v1–v3</b> — Queensland only. Iterative feature engineering, progressively adding data sources.<br><br>
-<b>v4</b> — National model covering all 2,442 suburbs. XGBoost + Random Forest classification. AUC 0.938. 100% hit rate on top 20 backtest predictions vs 25% from random selection.<br><br>
-<b>v5</b> — Switched from classification to regression. Trains directly on actual 2024–25 ABS dwelling approval counts. Added SHAP explainability and national ranking system.<br><br>
-<b>v8 (current)</b> — Velocity-focused classification engine. Custom momentum indicators and approval velocity features. Tighter temporal calibration to avoid overfitting old growth cycles. SHAP explainability retained. Spearman 0.750 on held-out CV folds.
-</div>
-
-<div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>Known Limitations</div>
-<div style='font-size:0.78rem; color:#4a6080; line-height:1.8; margin-bottom:1.2rem'>
-The model does not currently incorporate DA (development application) pipeline data. Urban renewal precincts with large DA pipelines are now captured via the pipeline pressure feature (ABS Table 80).
-Footscray ranks #11, Brunswick #6, Wollongong #14 nationally. Saturation index for fully built-out suburbs is the primary target for v10.
+<b>v1–v3</b> — Queensland only. Iterative feature engineering.<br><br>
+<b>v4</b> — National model, 2,442 suburbs. XGBoost + Random Forest. AUC 0.938.<br><br>
+<b>v5</b> — Switched to regression. SHAP explainability added.<br><br>
+<b>v8</b> — Velocity-focused classification. Spearman 0.750.<br><br>
+<b>v9</b> — Urban renewal blind spot fixed. Spearman 0.923. Inner-city precincts correctly identified.<br><br>
+<b>v10 (current)</b> — Saturation index, SHAP decomposition, SA4 rollup.
 </div>
 
 <div style='border-top:1px solid #dbe8f5; padding-top:1rem'>
@@ -138,416 +140,556 @@ ABS Building Approvals 2022–26<br>
 ABS Regional Population 2023–24<br>
 ABS Population History 2001–2024<br>
 SEIFA Socioeconomic Index 2021<br>
-ABS Approvals 2025–26 FYTD
+QLD Lot Approvals 2023–26<br>
+Residential Land Development Activity<br>
+ABS Building Activity Table 80 (8752.0)
 </div>
 </div>
 """, unsafe_allow_html=True)
 
-# ── Filtering ─────────────────────────────────────────────────────────────────
-filtered = results.copy()
-if selected != "All":
-    filtered = filtered[filtered["state"] == selected]
-filtered = filtered[filtered["pressure_score"] >= min_score]
-filtered = filtered.sort_values(["pressure_score", "national_rank"], ascending=[False, True])
+# ── Tab Navigation ────────────────────────────────────────────────────────────
+tab1, tab2, tab3, tab4, tab5 = st.tabs([
+    "🏆 Top Rankings", 
+    "📊 v9 vs v10 Comparison", 
+    "🗺️ SA4 Regional View",
+    "🔍 Suburb Search", 
+    "🗺️ Pressure Map"
+])
 
-# ── Top 10 Table ──────────────────────────────────────────────────────────────
-top10 = results.sort_values('national_rank').head(10).reset_index(drop=True)
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAB 1 — TOP RANKINGS
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab1:
+    # Version toggle
+    version = st.radio("Model Version", ["v10 (Saturation Adjusted)", "v9 (Original)"], horizontal=True)
+    
+    if version == "v10 (Saturation Adjusted)":
+        top10 = v10.sort_values('v10_rank').head(10).reset_index(drop=True)
+        rank_col = 'v10_rank'
+        score_col = 'v10_score'
+        badge = '<span class="version-badge-v10">v10</span>'
+    else:
+        top10 = v10.sort_values('v9_rank').head(10).reset_index(drop=True)
+        rank_col = 'v9_rank'
+        score_col = 'v9_score'
+        badge = '<span class="version-badge-v9">v9</span>'
 
-rows_html = ""
-for i, row in top10.iterrows():
-    rank = int(row['national_rank'])
-    score = row['pressure_score']
-    color = '#f87171' if rank <= 50 else '#fbbf24' if rank <= 200 else '#93c5fd'
-    signal = 'Critical' if rank <= 50 else 'High' if rank <= 200 else 'Moderate'
-    approvals = int(row['dwellings_2526_fytd']) if pd.notna(row['dwellings_2526_fytd']) else 'N/A'
-    bg = 'rgba(255,255,255,0.05)' if (i + 1) % 2 == 0 else 'transparent'
-    rows_html += (
-        f"<tr style='font-size:0.82rem;background:{bg};'>"
-        f"<td style='padding:0.5rem 0.6rem;color:rgba(255,255,255,0.35);font-weight:600'>#{rank}</td>"
-        f"<td style='padding:0.5rem 0.6rem;color:#ffffff;font-weight:600'>{row['sa2_name']}</td>"
-        f"<td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{row['state']}</td>"
-        f"<td style='padding:0.5rem 0.6rem;color:{color};font-weight:700'>{score}</td>"
-        f"<td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{row['erp_change_pct']}%</td>"
-        f"<td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{int(row['years_of_growth'])}/22</td>"
-        f"<td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{approvals}</td>"
-        f"<td style='padding:0.5rem 0.6rem;color:{color}'>{signal}</td>"
-        f"</tr>"
+    rows_html = ""
+    for i, row in top10.iterrows():
+        rank = int(row[rank_col])
+        score = round(row[score_col], 2)
+        v9r = int(row['v9_rank'])
+        v10r = int(row['v10_rank'])
+        shift = v9r - v10r
+        if version == "v10 (Saturation Adjusted)" and shift != 0:
+            arrow = f"<span style='color:#16a34a;font-size:0.75rem'>▲{abs(shift)}</span>" if shift > 0 else f"<span style='color:#dc2626;font-size:0.75rem'>▼{abs(shift)}</span>"
+        else:
+            arrow = ""
+        color = '#f87171' if rank <= 50 else '#fbbf24' if rank <= 200 else '#93c5fd'
+        signal = 'Critical' if rank <= 50 else 'High' if rank <= 200 else 'Moderate'
+        sat = round(row.get('saturation_index', 0), 3)
+        drivers = str(row.get('top_3_drivers', ''))
+        short_driver = drivers.split(' | ')[0].split(':')[0].strip() if drivers else '—'
+        bg = 'rgba(255,255,255,0.05)' if i % 2 == 0 else 'transparent'
+        rows_html += (
+            f"<tr style='font-size:0.82rem;background:{bg};'>"
+            f"<td style='padding:0.5rem 0.6rem;color:rgba(255,255,255,0.35);font-weight:600'>#{rank} {arrow}</td>"
+            f"<td style='padding:0.5rem 0.6rem;color:#ffffff;font-weight:600'>{row['sa2_name']}</td>"
+            f"<td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{row['state']}</td>"
+            f"<td style='padding:0.5rem 0.6rem;color:{color};font-weight:700'>{score}</td>"
+            f"<td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{sat}</td>"
+            f"<td style='padding:0.5rem 0.6rem;color:#a8c8e8;font-size:0.75rem'>{short_driver}</td>"
+            f"<td style='padding:0.5rem 0.6rem;color:{color}'>{signal}</td>"
+            f"</tr>"
+        )
+
+    html = (
+        f"<div style='background:linear-gradient(135deg,#1e3a5f 0%,#2563a8 60%,#3b82c4 100%);"
+        f"border-radius:16px;padding:1.8rem 2rem;margin-bottom:2rem;"
+        f"box-shadow:0 4px 24px rgba(37,99,168,0.18);'>"
+        f"<div style='font-family:Sora,sans-serif;font-size:1.2rem;font-weight:700;color:#ffffff;margin-bottom:0.2rem'>"
+        f"Top 10 Predicted Surge Suburbs — 2026/27 {badge}</div>"
+        f"<div style='font-size:0.78rem;color:#a8c8e8;margin-bottom:1.2rem'>"
+        f"Ranked by National Construction Pressure Rank · Based on 31 ML Features · Model v10</div>"
+        f"<table style='width:100%;border-collapse:collapse;'>"
+        f"<tr style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1px;"
+        f"border-bottom:1px solid rgba(255,255,255,0.1);'>"
+        f"<td style='padding:0.4rem 0.6rem'>Rank</td>"
+        f"<td style='padding:0.4rem 0.6rem'>Suburb</td>"
+        f"<td style='padding:0.4rem 0.6rem'>State</td>"
+        f"<td style='padding:0.4rem 0.6rem'>Score</td>"
+        f"<td style='padding:0.4rem 0.6rem'>Saturation</td>"
+        f"<td style='padding:0.4rem 0.6rem'>Top Driver</td>"
+        f"<td style='padding:0.4rem 0.6rem'>Signal</td>"
+        f"</tr>{rows_html}</table></div>"
     )
+    st.markdown(html, unsafe_allow_html=True)
 
-html = (
-    "<div style='background:linear-gradient(135deg,#1e3a5f 0%,#2563a8 60%,#3b82c4 100%);"
-    "border-radius:16px;padding:1.8rem 2rem;margin-bottom:2rem;"
-    "box-shadow:0 4px 24px rgba(37,99,168,0.18);'>"
-    "<div style='font-family:Sora,sans-serif;font-size:1.2rem;font-weight:700;color:#ffffff;margin-bottom:0.2rem'>"
-    "Top 10 Predicted Surge Suburbs — 2026/27</div>"
-    "<div style='font-size:0.78rem;color:#a8c8e8;margin-bottom:1.2rem'>"
-    "Ranked by National Construction Pressure Rank &nbsp;·&nbsp; Based on 35 ML Features &nbsp;·&nbsp; Model v9</div>"
-    "<table style='width:100%;border-collapse:collapse;'>"
-    "<tr style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1px;"
-    "border-bottom:1px solid rgba(255,255,255,0.1);'>"
-    "<td style='padding:0.4rem 0.6rem'>Rank</td>"
-    "<td style='padding:0.4rem 0.6rem'>Suburb</td>"
-    "<td style='padding:0.4rem 0.6rem'>State</td>"
-    "<td style='padding:0.4rem 0.6rem'>Score</td>"
-    "<td style='padding:0.4rem 0.6rem'>Pop Growth</td>"
-    "<td style='padding:0.4rem 0.6rem'>Growth Yrs</td>"
-    "<td style='padding:0.4rem 0.6rem'>Approvals FYTD</td>"
-    "<td style='padding:0.4rem 0.6rem'>Signal</td>"
-    f"</tr>{rows_html}</table></div>"
-)
-st.markdown(html, unsafe_allow_html=True)
+    # Top 20 bar chart
+    top20_v10 = v10.sort_values('v10_rank').head(20)
+    top20_v9 = v10.sort_values('v9_rank').head(20)
 
-# ── Prediction Explanation Box ────────────────────────────────────────────────
-components.html("""
-<link href='https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Sora:wght@400;600;700&display=swap' rel='stylesheet'>
-<div style='font-family:Inter,sans-serif;background:#ffffff;border:1px solid #dbe8f5;border-left:4px solid #2563a8;
-border-radius:12px;padding:1.6rem 2rem;margin-bottom:0.5rem;
-box-shadow:0 2px 8px rgba(37,99,168,0.07);'>
+    fig = go.Figure()
+    fig.add_trace(go.Bar(
+        y=top20_v10['sa2_name'] + ' (' + top20_v10['state'] + ')',
+        x=top20_v10['v10_score'],
+        orientation='h',
+        name='v10 Score',
+        marker_color='#2563a8',
+        text=top20_v10['v10_score'].round(2),
+        textposition='outside',
+    ))
+    fig.update_layout(
+        title='Top 20 Suburbs — v10 Adjusted Score',
+        xaxis_title='Composite Score',
+        yaxis=dict(autorange='reversed'),
+        height=520,
+        plot_bgcolor='#f7faff',
+        paper_bgcolor='#ffffff',
+        font=dict(family='Inter', size=12, color='#1a2332'),
+        margin=dict(l=20, r=60, t=50, b=20),
+        showlegend=False,
+    )
+    st.plotly_chart(fig, use_container_width=True)
 
-    <div style='font-family:Sora,sans-serif;font-size:1rem;font-weight:600;color:#1e3a5f;margin-bottom:1rem'>
-        How the 2026/27 Predictions Were Made
-    </div>
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAB 2 — v9 vs v10 COMPARISON
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab2:
+    st.markdown('<div class="section-title">What Changed from v9 to v10</div>', unsafe_allow_html=True)
 
-    <div style='display:grid;grid-template-columns:repeat(3,1fr);gap:1.5rem;margin-bottom:1.2rem;'>
-
-        <div style='background:#f7faff;border-radius:8px;padding:1rem 1.2rem;'>
-            <div style='font-size:0.68rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.4rem'>Step 1 — Historical Training</div>
-            <div style='font-size:0.82rem;color:#1a2332;line-height:1.7'>
-                Two ML models (XGBoost + Random Forest) were trained on
-                <b>2022–24 ABS building approval data</b> across all 2,442 suburbs.
-                The models learned which combination of signals historically preceded a construction surge.
+    components.html("""
+    <link href='https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Sora:wght@400;600;700&display=swap' rel='stylesheet'>
+    <div style='font-family:Inter,sans-serif;display:grid;grid-template-columns:1fr 1fr;gap:1.2rem;margin-bottom:1.5rem;'>
+        <div style='background:#fef3c7;border:1px solid #fde68a;border-left:4px solid #d97706;border-radius:10px;padding:1.2rem 1.5rem;'>
+            <div style='font-family:Sora,sans-serif;font-size:0.9rem;font-weight:700;color:#92400e;margin-bottom:0.6rem'>v9 — Activity Detector</div>
+            <div style='font-size:0.8rem;color:#78350f;line-height:1.8;'>
+                Ranked suburbs by raw construction activity volume.<br>
+                Fully built-out inner suburbs scored too high.<br>
+                No penalty for saturation.<br>
+                Spearman 0.923 — excellent signal, but activity ≠ stress.
             </div>
         </div>
-
-        <div style='background:#f7faff;border-radius:8px;padding:1rem 1.2rem;'>
-            <div style='font-size:0.68rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.4rem'>Step 2 — Velocity Scoring</div>
-            <div style='font-size:0.82rem;color:#1a2332;line-height:1.7'>
-                v8 introduces <b>construction velocity features</b> — measuring the
-                <i>rate of acceleration</i> in population growth and approvals, not just current levels.
-                Suburbs transitioning from stable to rapidly accelerating are ranked higher than those that have always been busy.
+        <div style='background:#dcfce7;border:1px solid #bbf7d0;border-left:4px solid #16a34a;border-radius:10px;padding:1.2rem 1.5rem;'>
+            <div style='font-family:Sora,sans-serif;font-size:0.9rem;font-weight:700;color:#166534;margin-bottom:0.6rem'>v10 — Stress Detector</div>
+            <div style='font-size:0.8rem;color:#14532d;line-height:1.8;'>
+                Saturation index penalises high-volume, decelerating suburbs.<br>
+                SHAP decomposition explains every score.<br>
+                SA4 rollup enables regional macro analysis.<br>
+                Rankings reflect genuine demand/supply imbalance.
             </div>
-        </div>
-
-        <div style='background:#f7faff;border-radius:8px;padding:1rem 1.2rem;'>
-            <div style='font-size:0.68rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px;margin-bottom:0.4rem'>Step 3 — Validation</div>
-            <div style='font-size:0.82rem;color:#1a2332;line-height:1.7'>
-                Predictions were validated using <b>5-fold cross-validation</b>
-                — each fold tested on suburbs the model never saw during training. v8 achieves a
-                <b>Spearman rank correlation of 0.750</b> and correctly identified <b>50 of the top 50</b> construction suburbs across all CV folds.
-            </div>
-        </div>
-
-    </div>
-
-    <div style='border-top:1px solid #dbe8f5;padding-top:1rem;display:flex;gap:2rem;flex-wrap:wrap;'>
-        <div style='font-size:0.78rem;color:#4a6080;line-height:1.8;flex:1;'>
-            <b style='color:#1e3a5f'>Why these suburbs for 2026/27?</b><br>
-            Each suburb in the top 10 exhibits a distinct combination of signals —
-            sustained population growth over 20+ years, above-average approval momentum,
-            and strong velocity indicators suggesting the pipeline is still filling.
-            Greenfield estates like Mickleham and Brabham show consistent high-volume approvals year-on-year.
-            Infill suburbs like Docklands and Ermington show exceptional approval volumes
-            that signal ongoing demand for the next cycle. The model weights <i>momentum</i> over raw size —
-            a suburb accelerating from 500 to 2,000 approvals scores higher than one that has been steady at 1,500 for a decade.
-        </div>
-        <div style='display:flex;gap:0.5rem;align-items:flex-start;flex-shrink:0;flex-wrap:wrap;padding-top:0.2rem'>
-            <span style='background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>Spearman 0.923</span>
-            <span style='background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>50/50 Top-10 CV Precision</span>
-            <span style='background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>2,442 Suburbs</span>
-            <span style='background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>7.3M Records</span>
-            <span style='background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px'>No Data Leakage</span>
         </div>
     </div>
+    """, height=175)
 
-</div>
-""", height=340)
+    # Biggest rank movers
+    v10_compare = v10.copy()
+    v10_compare['rank_change'] = v10_compare['v9_rank'] - v10_compare['v10_rank']
 
-# ── Suburb Search ─────────────────────────────────────────────────────────────
-# ── Why These Top 10 ──────────────────────────────────────────────────────────
-st.markdown('<div class="section-title">Why These Suburbs Ranked #1–10</div>', unsafe_allow_html=True)
+    col_up, col_down = st.columns(2)
 
-top10_explain = results.sort_values('national_rank').head(10).reset_index(drop=True)
+    with col_up:
+        st.markdown('<div class="section-title">📈 Biggest Risers (v9 → v10)</div>', unsafe_allow_html=True)
+        risers = v10_compare.sort_values('rank_change', ascending=False).head(15)
+        fig_up = go.Figure(go.Bar(
+            x=risers['rank_change'],
+            y=risers['sa2_name'] + ' (' + risers['state'] + ')',
+            orientation='h',
+            marker_color='#16a34a',
+            text=[f"#{int(r['v9_rank'])} → #{int(r['v10_rank'])}" for _, r in risers.iterrows()],
+            textposition='outside',
+        ))
+        fig_up.update_layout(
+            xaxis_title='Rank Improvement',
+            yaxis=dict(autorange='reversed'),
+            height=420,
+            plot_bgcolor='#f7faff',
+            paper_bgcolor='#ffffff',
+            font=dict(family='Inter', size=11, color='#1a2332'),
+            margin=dict(l=10, r=80, t=20, b=20),
+            showlegend=False,
+        )
+        st.plotly_chart(fig_up, use_container_width=True)
 
-explanations = {
-    'Whittlesea': "22 consecutive years of growth, massive greenfield land release pipeline, and strong overseas migration into Melbourne's northern corridor. Infrastructure consistently lagging demand.",
-    'Macquarie Park - Marsfield': "Sydney's highest urban renewal score in the top 10. Major rezoning uplift, university precinct demand, and approval pipeline surging in 2024-25.",
-    'Greenbank - North Maclean': "Masterplanned community in Logan's growth corridor. 22 years of growth, large lot approvals pipeline, and SEQ interstate migration pressure.",
-    'Mandurah - North': "WA's housing surge. Population rebound, rental crisis driving build pressure, and one of Perth's fastest-growing fringe corridors.",
-    'Fremantle': "Highest urban renewal score in WA top suburbs. Inner-city infill transformation, strong overseas migration, and constrained land supply driving persistent pressure.",
-    'Brunswick - South': "Melbourne inner-city infill zone with 20 years of consecutive growth. High density rezoning, strong rental demand, and approval pipeline accelerating in 2024-25.",
-    'Baldivis - North': "Perth's southern growth corridor. Greenfield estate releases, infrastructure lag, and population surge driven by WA's resource sector recovery.",
-    'Sunbury - South': "Melbourne's northwest growth frontier. 22 years of growth, large land releases, and proximity to employment corridors driving sustained approval momentum.",
-    'Munno Para West - Angle Vale': "Adelaide's fastest-growing northern corridor. Often overlooked nationally but one of Australia's strongest greenfield pressure zones by approval volume.",
-    'Hope Island': "Gold Coast's premium growth node. 22 consecutive growth years, constrained canal-front supply, and strong interstate migration from NSW and VIC.",
-}
+    with col_down:
+        st.markdown('<div class="section-title">📉 Biggest Fallers (Saturation Penalised)</div>', unsafe_allow_html=True)
+        fallers = v10_compare.sort_values('rank_change').head(15)
+        fig_down = go.Figure(go.Bar(
+            x=fallers['rank_change'].abs(),
+            y=fallers['sa2_name'] + ' (' + fallers['state'] + ')',
+            orientation='h',
+            marker_color='#dc2626',
+            text=[f"#{int(r['v9_rank'])} → #{int(r['v10_rank'])}" for _, r in fallers.iterrows()],
+            textposition='outside',
+        ))
+        fig_down.update_layout(
+            xaxis_title='Rank Drop',
+            yaxis=dict(autorange='reversed'),
+            height=420,
+            plot_bgcolor='#f7faff',
+            paper_bgcolor='#ffffff',
+            font=dict(family='Inter', size=11, color='#1a2332'),
+            margin=dict(l=10, r=80, t=20, b=20),
+            showlegend=False,
+        )
+        st.plotly_chart(fig_down, use_container_width=True)
 
-cards_html = "<div style='display:grid;grid-template-columns:repeat(2,1fr);gap:1rem;margin-bottom:2rem;'>"
-for i, row in top10_explain.iterrows():
-    name = row['sa2_name']
-    rank = int(row['national_rank'])
-    score = row['pressure_score']
-    state = row['state']
-    years = int(row['years_of_growth'])
-    urban = round(row['urban_renewal_score'], 2)
-    explanation = explanations.get(name, "Strong combination of population growth, approval momentum, and pipeline pressure signals.")
-    color = '#dc2626' if rank <= 3 else '#d97706' if rank <= 6 else '#2563a8'
-    cards_html += f"""
-    <div style='background:#ffffff;border:1px solid #dbe8f5;border-left:4px solid {color};
-    border-radius:10px;padding:1.2rem 1.4rem;box-shadow:0 2px 8px rgba(37,99,168,0.07);'>
-        <div style='display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:0.6rem;'>
-            <div>
-                <span style='font-family:Sora,sans-serif;font-size:1rem;font-weight:700;color:#1e3a5f'>#{rank} {name}</span>
-                <span style='font-size:0.78rem;color:#6b8cae;margin-left:0.4rem'>{state}</span>
-            </div>
-            <span style='font-size:1.1rem;font-weight:700;color:{color}'>{score}/100</span>
-        </div>
-        <div style='font-size:0.82rem;color:#4a6080;line-height:1.7;margin-bottom:0.8rem'>{explanation}</div>
-        <div style='display:flex;gap:0.5rem;flex-wrap:wrap;'>
-            <span style='background:#e8f0fb;color:#2563a8;font-size:0.7rem;font-weight:500;padding:0.15rem 0.5rem;border-radius:20px'>{years}/22 growth years</span>
-            <span style='background:#e8f0fb;color:#2563a8;font-size:0.7rem;font-weight:500;padding:0.15rem 0.5rem;border-radius:20px'>Urban renewal {urban}</span>
-            <span style='background:#e8f0fb;color:#2563a8;font-size:0.7rem;font-weight:500;padding:0.15rem 0.5rem;border-radius:20px'>{state}</span>
-        </div>
-    </div>"""
-cards_html += "</div>"
-st.markdown(cards_html, unsafe_allow_html=True)
+    # Blind spots fixed
+    st.markdown('<div class="section-title">🔭 Blind Spots Fixed in v9 (Now Correctly Identified)</div>', unsafe_allow_html=True)
 
-st.markdown('<div class="section-title">Suburb Search</div>', unsafe_allow_html=True)
-search = st.text_input("Suburb Search", label_visibility="collapsed", placeholder="Search any suburb — e.g. Ripley, Mickleham, Wollert...")
-if search:
-    found = results[results["sa2_name"].str.contains(search, case=False, na=False)]
-    if len(found) > 0:
-        for _, row in found.iterrows():
-            score = row["pressure_score"]
-            rank = int(row['national_rank'])
-            cls = "score-high" if rank <= 50 else "score-med" if rank <= 200 else "score-low"
-            signal_label = 'Critical' if rank <= 50 else 'High' if rank <= 200 else 'Moderate'
-            st.markdown(f"""
-            <div class="suburb-row">
-                <div>
-                    <b style='color:#1e3a5f;font-size:1rem'>{row['sa2_name']}</b>
-                    <span style='color:#6b8cae; font-size:0.82rem'> &nbsp;{row['state']}</span>
-                    <span style='color:#6b8cae; font-size:0.78rem'> &nbsp;·&nbsp; National Rank #{rank}</span>
-                </div>
-                <div style='text-align:right'>
-                    <span class='{cls}' style='font-size:1.1rem'>{score}/100</span>
-                    <span style='color:#6b8cae; font-size:0.8rem; margin-left:1rem'>
-                        {signal_label} &nbsp;|&nbsp; Pop growth {row['erp_change_pct']}%
-                        &nbsp;|&nbsp; {int(row['years_of_growth'])}/22 consecutive growth years
-                    </span>
-                </div>
-            </div>""", unsafe_allow_html=True)
+    blind_spots = [
+        {'Suburb': 'Footscray', 'State': 'VIC', 'v8 Rank': 'Outside top 200', 'v9 Rank': '#11', 'v10 Rank': None, 'Urban Renewal Score': 2.93},
+        {'Suburb': 'Brunswick South', 'State': 'VIC', 'v8 Rank': 'Outside top 200', 'v9 Rank': '#6', 'v10 Rank': None, 'Urban Renewal Score': 1.40},
+        {'Suburb': 'Wollongong East', 'State': 'NSW', 'v8 Rank': 'Outside top 200', 'v9 Rank': '#14', 'v10 Rank': None, 'Urban Renewal Score': 2.18},
+        {'Suburb': 'Zetland', 'State': 'NSW', 'v8 Rank': 'Outside top 200', 'v9 Rank': '#93', 'v10 Rank': None, 'Urban Renewal Score': 3.13},
+        {'Suburb': 'Rhodes', 'State': 'NSW', 'v8 Rank': 'Outside top 200', 'v9 Rank': '#127', 'v10 Rank': None, 'Urban Renewal Score': 2.80},
+        {'Suburb': 'Kangaroo Point', 'State': 'QLD', 'v8 Rank': 'Outside top 200', 'v9 Rank': '#16', 'v10 Rank': None, 'Urban Renewal Score': 3.17},
+        {'Suburb': 'Fremantle', 'State': 'WA', 'v8 Rank': 'Outside top 200', 'v9 Rank': '#5', 'v10 Rank': None, 'Urban Renewal Score': 2.39},
+    ]
 
-            if pd.notna(row.get('lat')) and pd.notna(row.get('lon')):
-                score_color = rank_to_color(rank)
+    for bs in blind_spots:
+        match = v10[v10['sa2_name'].str.contains(bs['Suburb'], case=False, na=False)]
+        if len(match) > 0:
+            bs['v10 Rank'] = f"#{int(match.iloc[0]['v10_rank'])}"
+        else:
+            bs['v10 Rank'] = bs['v9 Rank']
+
+    bs_df = pd.DataFrame(blind_spots)
+    st.dataframe(bs_df, use_container_width=True, hide_index=True)
+
+    # Scatter — v9 score vs v10 score coloured by saturation
+    st.markdown('<div class="section-title">v9 Score vs v10 Score — Saturation Effect</div>', unsafe_allow_html=True)
+    fig_scatter = px.scatter(
+        v10,
+        x='v9_score',
+        y='v10_score',
+        color='saturation_index',
+        color_continuous_scale='RdYlGn_r',
+        hover_name='sa2_name',
+        hover_data={'state': True, 'v9_rank': True, 'v10_rank': True, 'saturation_index': ':.3f'},
+        labels={'v9_score': 'v9 Score', 'v10_score': 'v10 Adjusted Score', 'saturation_index': 'Saturation'},
+        title='Suburbs below the diagonal were penalised by the saturation index',
+    )
+    fig_scatter.add_shape(type='line', x0=v10['v9_score'].min(), y0=v10['v9_score'].min(),
+                          x1=v10['v9_score'].max(), y1=v10['v9_score'].max(),
+                          line=dict(color='#94a3b8', dash='dash'))
+    fig_scatter.update_layout(
+        height=480,
+        plot_bgcolor='#f7faff',
+        paper_bgcolor='#ffffff',
+        font=dict(family='Inter', size=12, color='#1a2332'),
+    )
+    st.plotly_chart(fig_scatter, use_container_width=True)
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAB 3 — SA4 REGIONAL VIEW
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab3:
+    st.markdown('<div class="section-title">SA4 Regional Pressure Rankings</div>', unsafe_allow_html=True)
+
+    st.markdown("""
+    <div style='background:#e8f0fb;border-radius:10px;padding:1rem 1.4rem;margin-bottom:1.2rem;font-size:0.85rem;color:#1e3a5f;line-height:1.7;'>
+    SA4 regions are Statistical Area Level 4 — the macro geography used by the ABS. 
+    Each region aggregates multiple suburbs. This view shows average pressure across all suburbs within each region,
+    the proportion flagged as high pressure, and the single highest-scoring suburb in each region.
+    </div>
+    """, unsafe_allow_html=True)
+
+    # Load SA4 rollup
+    @st.cache_data(ttl=3600)
+    def load_sa4():
+        return pd.read_csv(f"{GITHUB}/sa4_rollup_v9.csv")
+
+    try:
+        sa4 = load_sa4()
+
+        # Top 20 SA4 bar chart
+        top20_sa4 = sa4.sort_values('sa4_rank').head(20)
+
+        fig_sa4 = go.Figure()
+        fig_sa4.add_trace(go.Bar(
+            y=top20_sa4['sa4_name'] + ' (' + top20_sa4['state'] + ')',
+            x=top20_sa4['avg_composite_score'],
+            orientation='h',
+            marker=dict(
+                color=top20_sa4['high_pressure_pct'],
+                colorscale='Blues',
+                showscale=True,
+                colorbar=dict(title='% High Pressure'),
+            ),
+            text=top20_sa4['top_suburb'],
+            textposition='outside',
+            hovertemplate='<b>%{y}</b><br>Avg Score: %{x:.2f}<br>Top suburb: %{text}<extra></extra>',
+        ))
+        fig_sa4.update_layout(
+            title='Top 20 SA4 Regions by Average Pressure Score',
+            xaxis_title='Average Composite Score',
+            yaxis=dict(autorange='reversed'),
+            height=560,
+            plot_bgcolor='#f7faff',
+            paper_bgcolor='#ffffff',
+            font=dict(family='Inter', size=12, color='#1a2332'),
+            margin=dict(l=20, r=120, t=50, b=20),
+        )
+        st.plotly_chart(fig_sa4, use_container_width=True)
+
+        # High pressure % by SA4
+        col_a, col_b = st.columns(2)
+        with col_a:
+            st.markdown('<div class="section-title">% High Pressure Suburbs by Region</div>', unsafe_allow_html=True)
+            top15_pct = sa4.sort_values('high_pressure_pct', ascending=False).head(15)
+            fig_pct = px.bar(
+                top15_pct,
+                x='high_pressure_pct',
+                y='sa4_name',
+                orientation='h',
+                color='high_pressure_pct',
+                color_continuous_scale='Reds',
+                labels={'high_pressure_pct': '% High Pressure', 'sa4_name': 'SA4 Region'},
+            )
+            fig_pct.update_layout(
+                height=420, plot_bgcolor='#f7faff', paper_bgcolor='#ffffff',
+                font=dict(family='Inter', size=11), showlegend=False,
+                yaxis=dict(autorange='reversed'),
+                margin=dict(l=10, r=20, t=20, b=20),
+                coloraxis_showscale=False,
+            )
+            st.plotly_chart(fig_pct, use_container_width=True)
+
+        with col_b:
+            st.markdown('<div class="section-title">Suburb Count by SA4 Region</div>', unsafe_allow_html=True)
+            top15_count = sa4.sort_values('suburb_count', ascending=False).head(15)
+            fig_count = px.bar(
+                top15_count,
+                x='suburb_count',
+                y='sa4_name',
+                orientation='h',
+                color='avg_composite_score',
+                color_continuous_scale='Blues',
+                labels={'suburb_count': 'Suburbs', 'sa4_name': 'SA4 Region'},
+            )
+            fig_count.update_layout(
+                height=420, plot_bgcolor='#f7faff', paper_bgcolor='#ffffff',
+                font=dict(family='Inter', size=11), showlegend=False,
+                yaxis=dict(autorange='reversed'),
+                margin=dict(l=10, r=20, t=20, b=20),
+                coloraxis_showscale=False,
+            )
+            st.plotly_chart(fig_count, use_container_width=True)
+
+        # Full SA4 table
+        st.markdown('<div class="section-title">Full SA4 Rankings Table</div>', unsafe_allow_html=True)
+        sa4_display = sa4[['sa4_rank','sa4_name','state','avg_composite_score','high_pressure_pct','suburb_count','top_suburb']].copy()
+        sa4_display.columns = ['Rank','SA4 Region','State','Avg Score','% High Pressure','Suburbs','Top Suburb']
+        sa4_display['Avg Score'] = sa4_display['Avg Score'].round(2)
+        st.dataframe(sa4_display, use_container_width=True, height=480, hide_index=True)
+
+    except Exception as e:
+        st.warning(f"SA4 data not yet on GitHub. Upload sa4_rollup_v9.csv to your repo. ({e})")
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAB 4 — SUBURB SEARCH
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab4:
+    st.markdown('<div class="section-title">Suburb Search</div>', unsafe_allow_html=True)
+    search = st.text_input("Search", label_visibility="collapsed", placeholder="Search any suburb — e.g. Ripley, Footscray, Fremantle...")
+
+    if search:
+        found_v9 = results[results["sa2_name"].str.contains(search, case=False, na=False)]
+        found_v10 = v10[v10['sa2_name'].str.contains(search, case=False, na=False)]
+
+        if len(found_v9) > 0:
+            for _, row in found_v9.iterrows():
+                score = row["pressure_score"]
+                rank_v9 = int(row['national_rank'])
+                cls = "score-high" if rank_v9 <= 50 else "score-med" if rank_v9 <= 200 else "score-low"
+                signal_label = 'Critical' if rank_v9 <= 50 else 'High' if rank_v9 <= 200 else 'Moderate'
+
+                # Get v10 data for this suburb
+                v10_row = found_v10[found_v10['sa2_name'] == row['sa2_name']]
+                rank_v10 = int(v10_row.iloc[0]['v10_rank']) if len(v10_row) > 0 else rank_v9
+                score_v10 = round(v10_row.iloc[0]['v10_score'], 2) if len(v10_row) > 0 else score
+                sat_idx = round(v10_row.iloc[0]['saturation_index'], 3) if len(v10_row) > 0 else 0
+                top_drivers = str(v10_row.iloc[0]['top_3_drivers']) if len(v10_row) > 0 else ''
+                rank_shift = rank_v9 - rank_v10
+                shift_html = ""
+                if rank_shift > 0:
+                    shift_html = f"<span style='color:#16a34a;font-size:0.8rem;margin-left:0.5rem'>▲ Rose {rank_shift} places in v10</span>"
+                elif rank_shift < 0:
+                    shift_html = f"<span style='color:#dc2626;font-size:0.8rem;margin-left:0.5rem'>▼ Fell {abs(rank_shift)} places in v10 (saturation)</span>"
+
+                st.markdown(f"""
+                <div class="suburb-row">
+                    <div>
+                        <b style='color:#1e3a5f;font-size:1rem'>{row['sa2_name']}</b>
+                        <span style='color:#6b8cae; font-size:0.82rem'> &nbsp;{row['state']}</span>
+                        <span style='color:#6b8cae; font-size:0.78rem'> &nbsp;·&nbsp; v9 Rank #{rank_v9} &nbsp;·&nbsp; v10 Rank #{rank_v10}</span>
+                        {shift_html}
+                    </div>
+                    <div style='text-align:right'>
+                        <span class='{cls}' style='font-size:1.1rem'>{score}/100</span>
+                        <span style='color:#6b8cae; font-size:0.8rem; margin-left:1rem'>
+                            {signal_label} &nbsp;|&nbsp; Pop growth {row['erp_change_pct']}%
+                            &nbsp;|&nbsp; {int(row['years_of_growth'])}/22 growth years
+                            &nbsp;|&nbsp; Saturation {sat_idx}
+                        </span>
+                    </div>
+                </div>""", unsafe_allow_html=True)
+
+                # SHAP decomposition chart
+                if top_drivers and top_drivers != 'nan':
+                    driver_parts = [d.strip() for d in top_drivers.split(' | ')]
+                    driver_names, driver_vals = [], []
+                    for d in driver_parts:
+                        try:
+                            name, val = d.rsplit(':', 1)
+                            driver_names.append(name.strip())
+                            driver_vals.append(float(val.strip()))
+                        except:
+                            pass
+
+                    if driver_names:
+                        colors = ['#16a34a' if v > 0 else '#dc2626' for v in driver_vals]
+                        fig_shap = go.Figure(go.Bar(
+                            x=driver_vals,
+                            y=driver_names,
+                            orientation='h',
+                            marker_color=colors,
+                            text=[f"{'+' if v > 0 else ''}{v:.3f}" for v in driver_vals],
+                            textposition='outside',
+                        ))
+                        fig_shap.update_layout(
+                            title=f"Why did {row['sa2_name']} score {score}/100? — SHAP Drivers",
+                            xaxis_title='SHAP Value (positive = pushes score up)',
+                            yaxis=dict(autorange='reversed'),
+                            height=280,
+                            plot_bgcolor='#f7faff',
+                            paper_bgcolor='#ffffff',
+                            font=dict(family='Inter', size=12, color='#1a2332'),
+                            margin=dict(l=20, r=80, t=50, b=20),
+                            showlegend=False,
+                        )
+                        st.plotly_chart(fig_shap, use_container_width=True)
+
+                # Stats grid
                 st.markdown(f"""
                 <div class="stat-card">
                     <div style='font-family:Sora,sans-serif;font-size:1rem;font-weight:600;color:#1e3a5f;margin-bottom:0.8rem'>
                         {row['sa2_name']} — Full Stats
                     </div>
-                    <div style='display:grid;grid-template-columns:repeat(3,1fr);gap:1rem;'>
-                        <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>Pressure Score</span><br>
-                            <span style='font-size:1.4rem;font-weight:700;color:{score_color}'>{score}/100</span></div>
-                        <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>National Rank</span><br>
-                            <span style='font-size:1.4rem;font-weight:700;color:{score_color}'>#{rank}</span></div>
-                        <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>Signal</span><br>
-                            <span style='font-size:1.4rem;font-weight:700;color:{score_color}'>{signal_label}</span></div>
+                    <div style='display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;'>
+                        <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>v9 Score</span><br>
+                            <span style='font-size:1.3rem;font-weight:700;color:#d97706'>{score}/100</span></div>
+                        <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>v10 Score</span><br>
+                            <span style='font-size:1.3rem;font-weight:700;color:#2563a8'>{score_v10}/100</span></div>
+                        <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>v9 Rank</span><br>
+                            <span style='font-size:1.3rem;font-weight:700;color:#d97706'>#{rank_v9}</span></div>
+                        <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>v10 Rank</span><br>
+                            <span style='font-size:1.3rem;font-weight:700;color:#2563a8'>#{rank_v10}</span></div>
+                        <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>Saturation Index</span><br>
+                            <span style='font-size:1.3rem;font-weight:700;color:#1e3a5f'>{sat_idx}</span></div>
                         <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>Pop Growth</span><br>
-                            <span style='font-size:1.4rem;font-weight:700;color:#1e3a5f'>{row['erp_change_pct']}%</span></div>
+                            <span style='font-size:1.3rem;font-weight:700;color:#1e3a5f'>{row['erp_change_pct']}%</span></div>
                         <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>20yr Growth</span><br>
-                            <span style='font-size:1.4rem;font-weight:700;color:#1e3a5f'>{round(row['growth_20yr']*100,1)}%</span></div>
-                        <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>Consecutive Growth Yrs</span><br>
-                            <span style='font-size:1.4rem;font-weight:700;color:#1e3a5f'>{int(row['years_of_growth'])}/22</span></div>
-                        <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>2025-26 Approvals FYTD</span><br>
-                            <span style='font-size:1.4rem;font-weight:700;color:#1e3a5f'>{int(row['dwellings_2526_fytd']) if pd.notna(row['dwellings_2526_fytd']) else "N/A"}</span></div>
-                        <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>State</span><br>
-                            <span style='font-size:1.4rem;font-weight:700;color:#1e3a5f'>{row['state']}</span></div>
+                            <span style='font-size:1.3rem;font-weight:700;color:#1e3a5f'>{round(row['growth_20yr']*100,1)}%</span></div>
+                        <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>Growth Years</span><br>
+                            <span style='font-size:1.3rem;font-weight:700;color:#1e3a5f'>{int(row['years_of_growth'])}/22</span></div>
                     </div>
                 </div>""", unsafe_allow_html=True)
 
-                # SHAP explainer
-                shap_row = shap_df[shap_df['sa2_name'] == row['sa2_name']]
-                if len(shap_row) > 0:
-                    shap_vals = shap_row.drop(columns=['sa2_name']).iloc[0]
-                    top5 = shap_vals.abs().sort_values(ascending=False).head(5)
-                    top5_vals = shap_vals[top5.index]
-                    max_val = top5.max()
-                    bars_html = ""
-                    for feat, val in zip(top5.index, top5_vals):
-                        bar_pct = int(abs(val) / max_val * 100)
-                        direction = 'Pushes score up' if val > 0 else 'Pushes score down'
-                        bar_color = '#2563a8' if val > 0 else '#94a3b8'
-                        bars_html += (
-                            f"<div style='margin-bottom:0.7rem'>"
-                            f"<div style='display:flex;justify-content:space-between;margin-bottom:0.2rem'>"
-                            f"<span style='font-size:0.78rem;color:#1e3a5f;font-weight:500'>{feat}</span>"
-                            f"<span style='font-size:0.72rem;color:#6b8cae'>{direction}</span></div>"
-                            f"<div style='background:#f0f4f8;border-radius:4px;height:8px;'>"
-                            f"<div style='background:{bar_color};width:{bar_pct}%;height:8px;border-radius:4px;'>"
-                            f"</div></div></div>"
-                        )
-                    shap_html = (
-                        f"<div class='stat-card' style='margin-top:0.5rem'>"
-                        f"<div style='font-family:Sora,sans-serif;font-size:0.9rem;font-weight:600;"
-                        f"color:#1e3a5f;margin-bottom:0.8rem'>"
-                        f"Why did {row['sa2_name']} score {score}/100?</div>"
-                        f"<div style='font-size:0.75rem;color:#6b8cae;margin-bottom:1rem'>"
-                        f"Top 5 factors driving this suburb's pressure score — based on SHAP values from the XGBoost v8 model</div>"
-                        f"{bars_html}</div>"
-                    )
-                    st.markdown(shap_html, unsafe_allow_html=True)
+                if pd.notna(row.get('lat')) and pd.notna(row.get('lon')):
+                    st.map(pd.DataFrame({'lat': [row['lat']], 'lon': [row['lon']]}),
+                           latitude=row['lat'], longitude=row['lon'], zoom=11)
+        else:
+            st.markdown("<span style='color:#6b8cae'>No suburb found. Try a different name.</span>", unsafe_allow_html=True)
 
-                suburb_map = pd.DataFrame({'lat': [row['lat']], 'lon': [row['lon']]})
-                st.map(suburb_map, latitude=row['lat'], longitude=row['lon'], zoom=11)
-
-    else:
-        st.markdown("<span style='color:#6b8cae'>No suburb found. Try a different name.</span>", unsafe_allow_html=True)
-
-# ── Pressure Map ──────────────────────────────────────────────────────────────
-st.markdown('<div class="section-title">Pressure Map</div>', unsafe_allow_html=True)
-
-legend_html = """
-<div style='background:linear-gradient(135deg,#1e3a5f 0%,#1a3358 100%);border-radius:14px;
-padding:1.4rem 2rem;margin-bottom:1.2rem;box-shadow:0 4px 18px rgba(30,58,95,0.18);
-display:flex;gap:3rem;align-items:flex-start;'>
-    <div style='flex:1;border-left:3px solid #f87171;padding-left:1rem;'>
-        <div style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:0.3rem'>Top 50 Nationally</div>
-        <div style='font-family:Sora,sans-serif;font-size:0.95rem;font-weight:700;color:#f87171;margin-bottom:0.3rem'>Critical Pressure</div>
-        <div style='font-size:0.76rem;color:#cbd5e1;line-height:1.6;'>All signals align — sustained population growth, strong approval momentum, and consistent 20-year history. Predicted to be among Australia's highest construction zones.</div>
-    </div>
-    <div style='flex:1;border-left:3px solid #fbbf24;padding-left:1rem;'>
-        <div style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:0.3rem'>Rank 51 – 200</div>
-        <div style='font-family:Sora,sans-serif;font-size:0.95rem;font-weight:700;color:#fbbf24;margin-bottom:0.3rem'>High Pressure</div>
-        <div style='font-size:0.76rem;color:#cbd5e1;line-height:1.6;'>Most indicators are elevated — strong population trend, above-average approvals, and positive long-term momentum. A construction surge is likely.</div>
-    </div>
-    <div style='flex:1;border-left:3px solid #93c5fd;padding-left:1rem;'>
-        <div style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:0.3rem'>Rank 201+</div>
-        <div style='font-family:Sora,sans-serif;font-size:0.95rem;font-weight:700;color:#93c5fd;margin-bottom:0.3rem'>Moderate / Low</div>
-        <div style='font-size:0.76rem;color:#cbd5e1;line-height:1.6;'>Some growth signals present but model confidence is lower. Population growth or approval activity may be inconsistent or below the threshold seen in high-pressure suburbs.</div>
-    </div>
-</div>
-<p style='font-size:0.82rem;color:#6b8cae;margin-top:0.2rem'>2,438 suburb boundaries shown &nbsp;·&nbsp; Hover any suburb for details</p>
-"""
-st.markdown(legend_html, unsafe_allow_html=True)
-
-for feature in geojson['features']:
-    name = feature['properties'].get('SA2_NAME21', '')
-    match = results[results['sa2_name'] == name]
-    if len(match) > 0:
-        rank = int(match.iloc[0]['national_rank'])
-    else:
-        rank = 9999
-    feature['properties']['fill_color'] = rank_to_map_color(rank)
-    feature['properties']['signal'] = 'Critical Pressure' if rank <= 50 else 'High Pressure' if rank <= 200 else 'Moderate / Low'
-    feature['properties']['national_rank'] = rank
-    feature['properties']['growth_20yr_pct'] = round(feature['properties'].get('growth_20yr', 0) * 100, 1)
-
-layer = pdk.Layer(
-    'GeoJsonLayer',
-    data=geojson,
-    pickable=True,
-    stroked=True,
-    filled=True,
-    get_fill_color='properties.fill_color',
-    get_line_color=[255, 255, 255, 60],
-    line_width_min_pixels=1,
-)
-
-view = pdk.ViewState(latitude=-27.0, longitude=134.0, zoom=3.5, pitch=0)
-
-tooltip = {
-    "html": "<b>{SA2_NAME21}</b> ({state})<br><b>{signal}</b><br>National Rank: <b>#{national_rank}</b><br>Pressure Score: <b>{pressure_score}</b>/100<br>Pop Growth: {erp_change_pct}%<br>Growth Years: {years_of_growth}/22",
-    "style": {
-        "backgroundColor": "#1e3a5f",
-        "color": "white",
-        "fontSize": "13px",
-        "padding": "8px",
-        "borderRadius": "6px"
-    }
-}
-
-st.pydeck_chart(pdk.Deck(
-    layers=[layer],
-    initial_view_state=view,
-    tooltip=tooltip,
-    map_style='https://basemaps.cartocdn.com/gl/positron-gl-style/style.json'
-))
-
-# ── Ranked Suburbs Table ───────────────────────────────────────────────────────
-st.markdown(
-    f'<div class="section-title">Ranked Suburbs'
-    f'<span style="font-family:Inter;font-size:0.88rem;color:#6b8cae;font-weight:400">'
-    f' &nbsp;·&nbsp; {selected} &nbsp;·&nbsp; Score >= {min_score}'
-    f' &nbsp;·&nbsp; {len(filtered):,} results</span></div>',
-    unsafe_allow_html=True
-)
-
-display = filtered[[
-    "national_rank", "sa2_name", "state", "pressure_score",
-    "erp_change_pct", "growth_20yr",
-    "years_of_growth", "dwellings_2526_fytd", "signal"
-]].copy()
-display.columns = [
-    "National Rank", "Suburb", "State", "Pressure Score",
-    "Pop Growth %", "20yr Growth",
-    "Consecutive Growth Years", "2025-26 Approvals FYTD", "Signal"
-]
-display["20yr Growth"] = (display["20yr Growth"] * 100).round(1).astype(str) + "%"
-display["Pressure Score"] = display["Pressure Score"].round(1)
-display["2025-26 Approvals FYTD"] = display["2025-26 Approvals FYTD"].apply(lambda x: int(x) if pd.notna(x) else "N/A")
-st.dataframe(display, use_container_width=True, height=480, hide_index=True)
-
-# ── State Bar Chart ────────────────────────────────────────────────────────────
-st.markdown('<div class="section-title">High Pressure Suburbs by State</div>', unsafe_allow_html=True)
-
-state_counts = (
-    results[results["pressure_score"] >= 75]
-    .groupby("state").size()
-    .reset_index(name="count")
-    .sort_values("count", ascending=False)
-)
-
-max_count = state_counts["count"].max()
-bars = ""
-for _, row in state_counts.iterrows():
-    bar_pct = int(row["count"] / max_count * 100)
-    bars += f"""
-    <div style='display:flex;align-items:center;margin-bottom:0.6rem;gap:1rem;'>
-        <div style='width:2.5rem;font-size:0.78rem;color:#6b8cae;font-weight:500;text-align:right;flex-shrink:0'>{row['state']}</div>
-        <div style='flex:1;background:#f0f4f8;border-radius:4px;height:28px;position:relative;'>
-            <div style='background:linear-gradient(90deg,#2563a8,#3b82c4);width:{bar_pct}%;height:28px;border-radius:4px;'></div>
+# ═══════════════════════════════════════════════════════════════════════════════
+# TAB 5 — PRESSURE MAP
+# ═══════════════════════════════════════════════════════════════════════════════
+with tab5:
+    legend_html = """
+    <div style='background:linear-gradient(135deg,#1e3a5f 0%,#1a3358 100%);border-radius:14px;
+    padding:1.4rem 2rem;margin-bottom:1.2rem;box-shadow:0 4px 18px rgba(30,58,95,0.18);
+    display:flex;gap:3rem;align-items:flex-start;'>
+        <div style='flex:1;border-left:3px solid #f87171;padding-left:1rem;'>
+            <div style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:0.3rem'>Top 50 Nationally</div>
+            <div style='font-family:Sora,sans-serif;font-size:0.95rem;font-weight:700;color:#f87171;margin-bottom:0.3rem'>Critical Pressure</div>
+            <div style='font-size:0.76rem;color:#cbd5e1;line-height:1.6;'>All signals align — sustained population growth, strong approval momentum, and consistent 20-year history.</div>
         </div>
-        <div style='width:2rem;font-size:0.82rem;color:#1e3a5f;font-weight:600;flex-shrink:0'>{row["count"]}</div>
-    </div>"""
+        <div style='flex:1;border-left:3px solid #fbbf24;padding-left:1rem;'>
+            <div style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:0.3rem'>Rank 51–200</div>
+            <div style='font-family:Sora,sans-serif;font-size:0.95rem;font-weight:700;color:#fbbf24;margin-bottom:0.3rem'>High Pressure</div>
+            <div style='font-size:0.76rem;color:#cbd5e1;line-height:1.6;'>Most indicators elevated — strong population trend, above-average approvals, positive momentum.</div>
+        </div>
+        <div style='flex:1;border-left:3px solid #93c5fd;padding-left:1rem;'>
+            <div style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:0.3rem'>Rank 201+</div>
+            <div style='font-family:Sora,sans-serif;font-size:0.95rem;font-weight:700;color:#93c5fd;margin-bottom:0.3rem'>Moderate / Low</div>
+            <div style='font-size:0.76rem;color:#cbd5e1;line-height:1.6;'>Some growth signals present but model confidence is lower.</div>
+        </div>
+    </div>
+    <p style='font-size:0.82rem;color:#6b8cae;margin-top:0.2rem'>2,438 suburb boundaries shown · Hover any suburb for details</p>
+    """
+    st.markdown(legend_html, unsafe_allow_html=True)
 
-chart_html = f"<div class='stat-card'><div style='font-size:0.78rem;color:#6b8cae;margin-bottom:1rem'>Number of suburbs with pressure score above 75 — by state</div>{bars}</div>"
-st.markdown(chart_html, unsafe_allow_html=True)
+    for feature in geojson['features']:
+        name = feature['properties'].get('SA2_NAME21', '')
+        match = results[results['sa2_name'] == name]
+        rank = int(match.iloc[0]['national_rank']) if len(match) > 0 else 9999
+        feature['properties']['fill_color'] = rank_to_map_color(rank)
+        feature['properties']['signal'] = 'Critical Pressure' if rank <= 50 else 'High Pressure' if rank <= 200 else 'Moderate / Low'
+        feature['properties']['national_rank'] = rank
+
+    layer = pdk.Layer(
+        'GeoJsonLayer', data=geojson, pickable=True, stroked=True, filled=True,
+        get_fill_color='properties.fill_color',
+        get_line_color=[255, 255, 255, 60], line_width_min_pixels=1,
+    )
+    view = pdk.ViewState(latitude=-27.0, longitude=134.0, zoom=3.5, pitch=0)
+    tooltip = {
+        "html": "<b>{SA2_NAME21}</b> ({state})<br><b>{signal}</b><br>National Rank: <b>#{national_rank}</b><br>Pressure Score: <b>{pressure_score}</b>/100<br>Pop Growth: {erp_change_pct}%",
+        "style": {"backgroundColor": "#1e3a5f", "color": "white", "fontSize": "13px", "padding": "8px", "borderRadius": "6px"}
+    }
+    st.pydeck_chart(pdk.Deck(
+        layers=[layer], initial_view_state=view, tooltip=tooltip,
+        map_style='https://basemaps.cartocdn.com/gl/positron-gl-style/style.json'
+    ))
+
+    # Full ranked table
+    st.markdown('<div class="section-title">All Suburbs Ranked</div>', unsafe_allow_html=True)
+    filtered = results.copy().sort_values(["pressure_score", "national_rank"], ascending=[False, True])
+    display = filtered[[
+        "national_rank", "sa2_name", "state", "pressure_score",
+        "erp_change_pct", "growth_20yr", "years_of_growth", "dwellings_2526_fytd", "signal"
+    ]].copy()
+    display.columns = ["National Rank", "Suburb", "State", "Pressure Score", "Pop Growth %",
+                       "20yr Growth", "Consecutive Growth Years", "2025-26 Approvals FYTD", "Signal"]
+    display["20yr Growth"] = (display["20yr Growth"] * 100).round(1).astype(str) + "%"
+    display["Pressure Score"] = display["Pressure Score"].round(1)
+    display["2025-26 Approvals FYTD"] = display["2025-26 Approvals FYTD"].apply(lambda x: int(x) if pd.notna(x) else "N/A")
+    st.dataframe(display, use_container_width=True, height=480, hide_index=True)
 
 # ── About ──────────────────────────────────────────────────────────────────────
 st.markdown('<div class="section-title">About This Model</div>', unsafe_allow_html=True)
 st.markdown("""
 <div class="about-box">
 <b style='color:#1e3a5f'>Methodology</b><br>
-Version 8 — velocity-focused classification engine trained on ABS building approval data across 2,442 suburbs nationally.
-Features include population growth rates, momentum indicators (rate of change in growth), approval velocity (new approvals vs 20-year rolling average),
-socioeconomic indices (SEIFA), and 2025–26 forward approval signals.
-Tighter temporal calibration prevents overfitting to old growth cycles.<br><br>
-<b style='color:#1e3a5f'>Validation</b><br>
-5-fold cross-validation achieving a Spearman rank correlation of 0.923 ± 0.013 on held-out folds —
-consistently identifying high-pressure suburbs on data the model never saw during training.
-Perfect top-10 precision across all 5 folds confirms reliable suburb-level ranking.
-Leakage prevention confirmed: removing the most forward-looking feature causes less than 1% performance change.<br><br>
-<b style='color:#1e3a5f'>What's New in v8</b><br>
-Introduced construction velocity features — momentum indicators that identify suburbs transitioning from stable to rapidly accelerating,
-and approval velocity ratios that flag suburbs <i>suddenly</i> becoming active rather than those that have always been busy.<br><br>
+Version 10 builds on v9's XGBoost classifier trained on ABS building approval data across 2,442 suburbs nationally.
+v9 introduced an urban renewal signal that fixed a systematic blind spot in inner-city precincts, achieving a Spearman rank correlation of 0.923.
+v10 adds a saturation index that penalises fully built-out suburbs, SHAP-based score decomposition for explainability, and SA4 regional rollup.<br><br>
+<b style='color:#1e3a5f'>What's New in v10</b><br>
+Saturation index uses dwellings-per-capita and growth deceleration to penalise suburbs where construction activity is high but capacity is exhausted.
+SHAP values from the XGBoost model explain every suburb's score in terms of its top contributing features.
+SA4 rollup aggregates suburb scores to regional level for macro analysis.<br><br>
 <b style='color:#1e3a5f'>Known Limitations</b><br>
-Urban renewal precincts with large DA pipelines but low recorded completions — including Rhodes, Footscray, and Zetland —
-are currently underscored. Adding council DA approval data is the primary target for v9.<br><br>
+No commencement data at SA2 level — pipeline proxy only. total_dwellings_2024-25 still dominates feature importance at 28.5%, 
+meaning the model remains closer to an activity detector than a pure stress detector. v11 will split into Build Pressure and Constraint Pressure indices.<br><br>
 <span class="tag">XGBoost</span>
-<span class="tag">Random Forest</span>
-<span class="tag">Spearman 0.750</span>
-<span class="tag">20 Features</span>
-<span class="tag">scikit-learn</span>
 <span class="tag">SHAP</span>
+<span class="tag">Spearman 0.923</span>
+<span class="tag">31 Features</span>
+<span class="tag">Saturation Index</span>
+<span class="tag">SA4 Rollup</span>
+<span class="tag">scikit-learn</span>
 <span class="tag">Streamlit</span>
 <span class="tag">Python</span>
 </div>
