@@ -8,7 +8,7 @@ import plotly.express as px
 
 st.set_page_config(
     page_title="Australia Construction Pressure Index",
-    page_icon="None",
+    page_icon="🏗️",
     layout="wide",
     initial_sidebar_state="expanded"
 )
@@ -520,23 +520,16 @@ with tab4:
                 elif rank_shift < 0:
                     shift_html = f"<span style='color:#dc2626;font-size:0.8rem;margin-left:0.5rem'>▼ Fell {abs(rank_shift)} places in v10 (saturation)</span>"
 
-                st.markdown(f"""
-                <div class="suburb-row">
-                    <div>
-                        <b style='color:#1e3a5f;font-size:1rem'>{row['sa2_name']}</b>
-                        <span style='color:#6b8cae; font-size:0.82rem'> &nbsp;{row['state']}</span>
-                        <span style='color:#6b8cae; font-size:0.78rem'> &nbsp;·&nbsp; v9 Rank #{rank_v9} &nbsp;·&nbsp; v10 Rank #{rank_v10}</span>
-                        {shift_html}
-                    </div>
-                    <div style='text-align:right'>
-                        <span class='{cls}' style='font-size:1.1rem'>{score}/100</span>
-                        <span style='color:#6b8cae; font-size:0.8rem; margin-left:1rem'>
-                            {signal_label} &nbsp;|&nbsp; Pop growth {row['erp_change_pct']}%
-                            &nbsp;|&nbsp; {int(row['years_of_growth'])}/22 growth years
-                            &nbsp;|&nbsp; Saturation {sat_idx}
-                        </span>
-                    </div>
-                </div>""", unsafe_allow_html=True)
+                suburb_html = "<div class='suburb-row'>"
+                suburb_html += f"<div><b style='color:#1e3a5f;font-size:1rem'>{row['sa2_name']}</b>"
+                suburb_html += f"<span style='color:#6b8cae;font-size:0.82rem'> &nbsp;{row['state']}</span>"
+                suburb_html += f"<span style='color:#6b8cae;font-size:0.78rem'> &nbsp;·&nbsp; v9 Rank #{rank_v9} &nbsp;·&nbsp; v10 Rank #{rank_v10}</span>"
+                suburb_html += shift_html + "</div>"
+                suburb_html += "<div style='text-align:right'>"
+                suburb_html += f"<span class='{cls}' style='font-size:1.1rem'>{score}/100</span>"
+                suburb_html += f"<span style='color:#6b8cae;font-size:0.8rem;margin-left:1rem'>{signal_label} &nbsp;|&nbsp; Pop growth {row['erp_change_pct']}% &nbsp;|&nbsp; {int(row['years_of_growth'])}/22 growth years &nbsp;|&nbsp; Saturation {sat_idx}</span>"
+                suburb_html += "</div></div>"
+                st.markdown(suburb_html, unsafe_allow_html=True)
 
                 # SHAP decomposition chart
                 if top_drivers and top_drivers != 'nan':
