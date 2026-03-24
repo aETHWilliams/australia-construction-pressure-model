@@ -96,7 +96,7 @@ metrics = [
     ("611", "High Pressure Suburbs"),
     ("2,442", "Suburbs Analysed"),
     ("88", "SA4 Regions Ranked"),
-    ("7", "Data Sources"),
+    ("7.3M+", "Records Processed"),
 ]
 for col, (val, label) in zip([c1, c2, c3, c4, c5], metrics):
     col.markdown(f"""
