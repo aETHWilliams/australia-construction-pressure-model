@@ -3,5 +3,3 @@ pandas
 plotly
 pydeck
 requests
-folium
-streamlit-folium
