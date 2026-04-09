@@ -95,26 +95,46 @@ def classify_interpretation_risk(row):
         return "Low"
     return "Medium"
 
+# CHANGE 1: Updated classify_pressure_frame
 def classify_pressure_frame(row):
     archetype = row["market_archetype"]
     sat = float(row.get("saturation_index", 0)) if pd.notna(row.get("saturation_index", 0)) else 0
     rank = float(row.get("v10_rank", 9999))
+    pop_growth = float(row.get("erp_change_pct", 0)) if pd.notna(row.get("erp_change_pct", 0)) else 0
+    growth_years = float(row.get("years_of_growth", 0)) if pd.notna(row.get("years_of_growth", 0)) else 0
 
-    if archetype == "Greenfield Growth" and rank <= 200:
-        return "Likely Build Pressure"
     if archetype in ["Urban Renewal", "Inner Infill"] and rank <= 150:
         return "Needs Industry Validation"
-    if sat >= 0.07:
-        return "Maturing / Delivered"
-    return "Likely Constraint Pressure"
 
+    if archetype == "Greenfield Growth" and rank <= 200:
+        return "Likely Near-Term Build"
+
+    if sat >= 0.10:
+        return "Potentially Mature Market"
+
+    if pop_growth >= 2.0 and growth_years >= 10 and rank <= 200:
+        return "Likely Near-Term Build"
+
+    if sat >= 0.07:
+        return "Mixed Pipeline Signals"
+
+    return "Mixed Pipeline Signals"
+
+# CHANGE 2: Updated validation_signal
 def validation_signal(row):
     archetype = row["market_archetype"]
+    pressure_frame = row["pressure_frame"]
+
     if archetype in ["Urban Renewal", "Inner Infill"]:
         return "Demolition, enabling works, tender flow, contractor mobilisation"
-    if archetype == "Greenfield Growth":
-        return "Subdivision, servicing, trunk infrastructure, estate staging"
-    return "Tender flow and site preparation"
+
+    if pressure_frame == "Likely Near-Term Build":
+        return "Subdivision, servicing, estate staging, site preparation"
+
+    if pressure_frame == "Potentially Mature Market":
+        return "Fresh approvals, renewed population growth, new site mobilisation"
+
+    return "Tender flow, site preparation, contractor mobilisation"
 
 v10["market_archetype"] = v10.apply(classify_market_archetype, axis=1)
 v10["interpretation_risk"] = v10.apply(classify_interpretation_risk, axis=1)
@@ -241,6 +261,7 @@ with tab1:
             f"</tr>"
         )
 
+    # CHANGE 3 & 4: Updated column header and ranking subtitle
     html = (
         f"<div style='background:linear-gradient(135deg,#1e3a5f 0%,#2563a8 60%,#3b82c4 100%);"
         f"border-radius:16px;padding:1.8rem 2rem;margin-bottom:2rem;"
@@ -248,7 +269,7 @@ with tab1:
         f"<div style='font-family:Sora,sans-serif;font-size:1.2rem;font-weight:700;color:#ffffff;margin-bottom:0.2rem'>"
         f"Top 10 Construction Pressure Suburbs — 2026/27 {badge}</div>"
         f"<div style='font-size:0.78rem;color:#a8c8e8;margin-bottom:1.2rem'>"
-        f"Ranked by national construction pressure · Model output plus interpretation layer</div>"
+        f"Ranked by national construction pressure, with an interpretation overlay highlighting where approvals may not translate cleanly into near-term site activity.</div>"
         f"<table style='width:100%;border-collapse:collapse;'>"
         f"<tr style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid rgba(255,255,255,0.1);'>"
         f"<td style='padding:0.4rem 0.6rem'>Rank</td>"
@@ -256,7 +277,7 @@ with tab1:
         f"<td style='padding:0.4rem 0.6rem'>State</td>"
         f"<td style='padding:0.4rem 0.6rem'>Score</td>"
         f"<td style='padding:0.4rem 0.6rem'>Saturation</td>"
-        f"<td style='padding:0.4rem 0.6rem'>Frame</td>"
+        f"<td style='padding:0.4rem 0.6rem'>Interpretation</td>"
         f"<td style='padding:0.4rem 0.6rem'>Signal</td>"
         f"</tr>{rows_html}</table></div>"
     )
@@ -265,12 +286,14 @@ with tab1:
 with tab2:
     st.markdown('<div class="section-title">Industry Validation</div>', unsafe_allow_html=True)
 
+    # CHANGE 5: Updated Industry Validation intro copy
     st.markdown("""
     <div style='background:#ffffff;border:1px solid #dbe8f5;border-left:4px solid #2563a8;border-radius:10px;
     padding:1.2rem 1.4rem;margin-bottom:1.2rem;box-shadow:0 2px 8px rgba(37,99,168,0.05);font-size:0.85rem;
     color:#4a6080;line-height:1.8;'>
     This layer is designed to answer the main limitation in the model: <b>high-ranking suburbs are not all equal in certainty</b>.
-    Some appear more likely to convert into near-term build activity. Others may represent constrained pipeline that still needs contractor judgement.
+    Some high-ranking suburbs are more likely to translate into near-term construction activity, while others may reflect pipeline
+    that still requires industry validation before drawing strong conclusions.
     </div>
     """, unsafe_allow_html=True)
 
@@ -483,6 +506,7 @@ with tab7:
     ))
 
 st.markdown('<div class="section-title">About This Model</div>', unsafe_allow_html=True)
+# CHANGE 6 & 7: Updated About section wording and tags
 st.markdown("""
 <div class="about-box">
 <b style='color:#1e3a5f'>Methodology</b><br>
@@ -490,8 +514,8 @@ Version 10 builds on v9's XGBoost framework trained on suburb-level approvals, d
 The model is designed to rank <b>construction pressure</b>, not to directly observe commencements at suburb level.<br><br>
 
 <b style='color:#1e3a5f'>What This New Layer Adds</b><br>
-The app now adds a practical interpretation layer that flags where high rankings are more likely to reflect near-term build pressure,
-and where they may instead reflect constrained pipeline that still needs industry validation.<br><br>
+The app now adds a practical interpretation layer that highlights where high rankings may be more likely to reflect near-term build activity,
+and where they may instead require industry validation before being interpreted too strongly.<br><br>
 
 <b style='color:#1e3a5f'>Key Interpretation Gap</b><br>
 The main unresolved issue is <b>approvals-to-commencement conversion</b>. The model currently sees approvals and pipeline pressure more directly
@@ -499,8 +523,9 @@ than actual on-site conversion, particularly in apartment and urban renewal prec
 
 <span class="tag">XGBoost</span>
 <span class="tag">Interpretation Layer</span>
-<span class="tag">Build Pressure</span>
-<span class="tag">Constraint Pressure</span>
+<span class="tag">Near-Term Build</span>
+<span class="tag">Industry Validation</span>
+<span class="tag">Mixed Signals</span>
 <span class="tag">SA4 Rollup</span>
 <span class="tag">Streamlit</span>
 </div>
