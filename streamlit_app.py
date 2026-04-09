@@ -54,16 +54,6 @@ results, v10, geojson = load_data()
 results["erp_change_pct"] = results["erp_change_pct"].round(1)
 results["dwellings_2526_fytd"] = results["dwellings_2526_fytd"].fillna(0).astype(int)
 
-def parse_top_driver(drivers_str, n=0):
-    try:
-        parts = str(drivers_str).split(" | ")
-        if n < len(parts):
-            feat, val = parts[n].rsplit(":", 1)
-            return feat.strip(), float(val.strip())
-    except Exception:
-        pass
-    return None, 0.0
-
 def rank_to_map_color(rank):
     if rank <= 50:
         return [220, 38, 38, 180]
@@ -72,7 +62,65 @@ def rank_to_map_color(rank):
     else:
         return [37, 99, 168, 140]
 
-# Header
+def get_urban_score(row):
+    for col in ["urban_renewal_score", "urban_renewal_importance"]:
+        if col in row and pd.notna(row[col]):
+            return float(row[col])
+    return 0.0
+
+def classify_market_archetype(row):
+    name = str(row.get("sa2_name", "")).lower()
+    urban = get_urban_score(row)
+    growth_years = float(row.get("years_of_growth", 0)) if pd.notna(row.get("years_of_growth", 0)) else 0
+    pop_growth = float(row.get("erp_change_pct", 0)) if pd.notna(row.get("erp_change_pct", 0)) else 0
+
+    urban_names = [
+        "docklands", "rhodes", "zetland", "footscray", "southbank", "parramatta",
+        "brunswick", "northbridge", "macquarie park", "kangaroo point", "fremantle"
+    ]
+    if any(x in name for x in urban_names):
+        return "Urban Renewal"
+    if urban >= 2.0:
+        return "Inner Infill"
+    if growth_years >= 12 and pop_growth >= 2.0:
+        return "Greenfield Growth"
+    return "Established / Mixed"
+
+def classify_interpretation_risk(row):
+    archetype = row["market_archetype"]
+    rank = float(row.get("v10_rank", 9999))
+    if archetype in ["Urban Renewal", "Inner Infill"] and rank <= 200:
+        return "High"
+    if archetype == "Greenfield Growth":
+        return "Low"
+    return "Medium"
+
+def classify_pressure_frame(row):
+    archetype = row["market_archetype"]
+    sat = float(row.get("saturation_index", 0)) if pd.notna(row.get("saturation_index", 0)) else 0
+    rank = float(row.get("v10_rank", 9999))
+
+    if archetype == "Greenfield Growth" and rank <= 200:
+        return "Likely Build Pressure"
+    if archetype in ["Urban Renewal", "Inner Infill"] and rank <= 150:
+        return "Needs Industry Validation"
+    if sat >= 0.07:
+        return "Maturing / Delivered"
+    return "Likely Constraint Pressure"
+
+def validation_signal(row):
+    archetype = row["market_archetype"]
+    if archetype in ["Urban Renewal", "Inner Infill"]:
+        return "Demolition, enabling works, tender flow, contractor mobilisation"
+    if archetype == "Greenfield Growth":
+        return "Subdivision, servicing, trunk infrastructure, estate staging"
+    return "Tender flow and site preparation"
+
+v10["market_archetype"] = v10.apply(classify_market_archetype, axis=1)
+v10["interpretation_risk"] = v10.apply(classify_interpretation_risk, axis=1)
+v10["pressure_frame"] = v10.apply(classify_pressure_frame, axis=1)
+v10["validation_signal"] = v10.apply(validation_signal, axis=1)
+
 st.markdown("""
 <div class="header-wrap">
     <div class="header-title">Australia Construction Pressure Index</div>
@@ -89,7 +137,6 @@ especially in apartment and urban renewal precincts where approvals and commence
 </div>
 """, unsafe_allow_html=True)
 
-# Metrics
 c1, c2, c3, c4, c5 = st.columns(5)
 metrics = [
     ("0.923", "CV Spearman"),
@@ -107,7 +154,6 @@ for col, (val, label) in zip([c1, c2, c3, c4, c5], metrics):
 
 st.markdown("<div style='margin-top: 2rem'></div>", unsafe_allow_html=True)
 
-# Sidebar
 st.sidebar.markdown("""
 <div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>What This App Does</div>
 <div style='font-size:0.78rem; color:#4a6080; line-height:1.8; margin-bottom:1.2rem'>
@@ -131,26 +177,13 @@ feasibility, finance, staging, cost, or market conditions. That means approvals 
 <div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>Current Interpretation Gap</div>
 <div style='font-size:0.78rem; color:#4a6080; line-height:1.8; margin-bottom:1.2rem'>
 The main unresolved question is <b>approvals-to-commencement conversion</b>. The model currently sees pipeline pressure more directly
-than actual on-site conversion, which is why the next stage is to separate <b>Build Pressure</b> from <b>Constraint Pressure</b>.
-</div>
-
-<div style='border-top:1px solid #dbe8f5; padding-top:1rem'>
-<div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>Data Sources</div>
-<div style='font-size:0.78rem; color:#6b8cae; line-height:2'>
-ABS Building Approvals 2022–26<br>
-ABS Regional Population 2023–24<br>
-ABS Population History 2001–2024<br>
-SEIFA Socioeconomic Index 2021<br>
-QLD Lot Approvals 2023–26<br>
-Residential Land Development Activity<br>
-ABS Building Activity Table 80 (8752.0)
-</div>
+than actual on-site conversion, which is why this app now flags where <b>industry validation</b> is still needed.
 </div>
 """, unsafe_allow_html=True)
 
-# Tabs
-tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+tab1, tab2, tab3, tab4, tab5, tab6, tab7 = st.tabs([
     "Executive Summary",
+    "Industry Validation",
     "Approvals vs Commencement Risk",
     "v9 vs v10 Comparison",
     "SA4 Regional View",
@@ -158,7 +191,6 @@ tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
     "Pressure Map"
 ])
 
-# TAB 1 — Executive Summary
 with tab1:
     st.markdown('<div class="section-title">Executive Summary</div>', unsafe_allow_html=True)
 
@@ -190,15 +222,12 @@ with tab1:
         v9r = int(row["v9_rank"])
         v10r = int(row["v10_rank"])
         shift = v9r - v10r
+        arrow = ""
         if version == "v10 (Saturation Adjusted)" and shift != 0:
             arrow = f"<span style='color:#16a34a;font-size:0.75rem'>▲{abs(shift)}</span>" if shift > 0 else f"<span style='color:#dc2626;font-size:0.75rem'>▼{abs(shift)}</span>"
-        else:
-            arrow = ""
         color = "#f87171" if rank <= 50 else "#fbbf24" if rank <= 200 else "#93c5fd"
         signal = "Critical" if rank <= 50 else "High" if rank <= 200 else "Moderate"
         sat = round(row.get("saturation_index", 0), 3)
-        drivers = str(row.get("top_3_drivers", ""))
-        short_driver = drivers.split(" | ")[0].split(":")[0].strip() if drivers else "—"
         bg = "rgba(255,255,255,0.05)" if i % 2 == 0 else "transparent"
         rows_html += (
             f"<tr style='font-size:0.82rem;background:{bg};'>"
@@ -207,7 +236,7 @@ with tab1:
             f"<td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{row['state']}</td>"
             f"<td style='padding:0.5rem 0.6rem;color:{color};font-weight:700'>{score}</td>"
             f"<td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{sat}</td>"
-            f"<td style='padding:0.5rem 0.6rem;color:#a8c8e8;font-size:0.75rem'>{short_driver}</td>"
+            f"<td style='padding:0.5rem 0.6rem;color:#a8c8e8'>{row['pressure_frame']}</td>"
             f"<td style='padding:0.5rem 0.6rem;color:{color}'>{signal}</td>"
             f"</tr>"
         )
@@ -219,48 +248,63 @@ with tab1:
         f"<div style='font-family:Sora,sans-serif;font-size:1.2rem;font-weight:700;color:#ffffff;margin-bottom:0.2rem'>"
         f"Top 10 Construction Pressure Suburbs — 2026/27 {badge}</div>"
         f"<div style='font-size:0.78rem;color:#a8c8e8;margin-bottom:1.2rem'>"
-        f"Ranked by national construction pressure · Based on 31 ML features · Model v10</div>"
+        f"Ranked by national construction pressure · Model output plus interpretation layer</div>"
         f"<table style='width:100%;border-collapse:collapse;'>"
-        f"<tr style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1px;"
-        f"border-bottom:1px solid rgba(255,255,255,0.1);'>"
+        f"<tr style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1px;border-bottom:1px solid rgba(255,255,255,0.1);'>"
         f"<td style='padding:0.4rem 0.6rem'>Rank</td>"
         f"<td style='padding:0.4rem 0.6rem'>Suburb</td>"
         f"<td style='padding:0.4rem 0.6rem'>State</td>"
         f"<td style='padding:0.4rem 0.6rem'>Score</td>"
         f"<td style='padding:0.4rem 0.6rem'>Saturation</td>"
-        f"<td style='padding:0.4rem 0.6rem'>Top Driver</td>"
+        f"<td style='padding:0.4rem 0.6rem'>Frame</td>"
         f"<td style='padding:0.4rem 0.6rem'>Signal</td>"
         f"</tr>{rows_html}</table></div>"
     )
     st.markdown(html, unsafe_allow_html=True)
 
-    top20_v10 = v10.sort_values("v10_rank").head(20)
+with tab2:
+    st.markdown('<div class="section-title">Industry Validation</div>', unsafe_allow_html=True)
 
-    fig = go.Figure()
-    fig.add_trace(go.Bar(
-        y=top20_v10["sa2_name"] + " (" + top20_v10["state"] + ")",
-        x=top20_v10["v10_score"],
-        orientation="h",
-        name="v10 Score",
-        marker_color="#2563a8",
-        text=top20_v10["v10_score"].round(2),
-        textposition="outside",
+    st.markdown("""
+    <div style='background:#ffffff;border:1px solid #dbe8f5;border-left:4px solid #2563a8;border-radius:10px;
+    padding:1.2rem 1.4rem;margin-bottom:1.2rem;box-shadow:0 2px 8px rgba(37,99,168,0.05);font-size:0.85rem;
+    color:#4a6080;line-height:1.8;'>
+    This layer is designed to answer the main limitation in the model: <b>high-ranking suburbs are not all equal in certainty</b>.
+    Some appear more likely to convert into near-term build activity. Others may represent constrained pipeline that still needs contractor judgement.
+    </div>
+    """, unsafe_allow_html=True)
+
+    shortlist = v10[v10["v10_rank"] <= 200][[
+        "sa2_name", "state", "v10_rank", "v10_score", "market_archetype",
+        "pressure_frame", "interpretation_risk", "validation_signal"
+    ]].copy().sort_values(["interpretation_risk", "v10_rank"], ascending=[True, True])
+
+    shortlist.columns = [
+        "Suburb", "State", "v10 Rank", "v10 Score", "Market Archetype",
+        "Pressure Frame", "Interpretation Risk", "What Would Confirm It"
+    ]
+
+    st.dataframe(shortlist, use_container_width=True, height=500, hide_index=True)
+
+    risk_counts = v10[v10["v10_rank"] <= 200]["interpretation_risk"].value_counts().reindex(["Low", "Medium", "High"]).fillna(0)
+    fig_risk = go.Figure(go.Bar(
+        x=risk_counts.index,
+        y=risk_counts.values,
+        marker_color=["#16a34a", "#d97706", "#dc2626"]
     ))
-    fig.update_layout(
-        title="Top 20 Suburbs — v10 Adjusted Score",
-        xaxis_title="Composite Score",
-        yaxis=dict(autorange="reversed"),
-        height=520,
+    fig_risk.update_layout(
+        title="Interpretation Risk Across Top 200 Suburbs",
+        xaxis_title="Interpretation Risk",
+        yaxis_title="Number of Suburbs",
         plot_bgcolor="#f7faff",
         paper_bgcolor="#ffffff",
         font=dict(family="Inter", size=12, color="#1a2332"),
-        margin=dict(l=20, r=60, t=50, b=20),
+        height=350,
         showlegend=False,
     )
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig_risk, use_container_width=True)
 
-# TAB 2 — Approvals vs Commencement Risk
-with tab2:
+with tab3:
     st.markdown('<div class="section-title">Approvals vs Commencement Risk</div>', unsafe_allow_html=True)
 
     st.markdown("""
@@ -273,42 +317,10 @@ with tab2:
     </div>
     """, unsafe_allow_html=True)
 
-    case_studies = [
-        {
-            "suburb": "Rhodes",
-            "type": "Urban renewal / apartment-led",
-            "interpretation": "Likely constrained pipeline",
-            "why": "Large approved pipeline, but approvals may overstate near-term site activity if delivery is delayed."
-        },
-        {
-            "suburb": "Zetland",
-            "type": "Inner-city infill",
-            "interpretation": "Likely constrained pipeline",
-            "why": "Dense renewal market where feasibility, staging and timing may weaken approvals-to-commencement conversion."
-        },
-        {
-            "suburb": "Footscray",
-            "type": "Urban renewal / mixed-use",
-            "interpretation": "Requires industry validation",
-            "why": "Strong renewal signal, but timing uncertainty remains around actual site mobilisation."
-        },
-        {
-            "suburb": "Docklands",
-            "type": "High-density inner metro",
-            "interpretation": "Requires industry validation",
-            "why": "High strategic importance, but paper pipeline may not cleanly translate to near-term construction work."
-        },
-        {
-            "suburb": "Ripley",
-            "type": "Greenfield corridor",
-            "interpretation": "Likely near-term build pressure",
-            "why": "In growth corridors, approvals are more likely to align with real delivery activity."
-        }
-    ]
-
+    case_names = ["Rhodes", "Zetland", "Footscray", "Docklands", "Ripley"]
     case_rows = []
-    for case in case_studies:
-        match = v10[v10["sa2_name"].str.contains(case["suburb"], case=False, na=False)]
+    for name in case_names:
+        match = v10[v10["sa2_name"].str.contains(name, case=False, na=False)]
         if len(match) > 0:
             row = match.iloc[0]
             case_rows.append({
@@ -316,43 +328,15 @@ with tab2:
                 "State": row["state"],
                 "v10 Rank": int(row["v10_rank"]),
                 "v10 Score": round(row["v10_score"], 2),
-                "Saturation": round(row.get("saturation_index", 0), 3),
-                "Market Type": case["type"],
-                "Interpretation": case["interpretation"],
-                "Why It Matters": case["why"]
+                "Market Archetype": row["market_archetype"],
+                "Pressure Frame": row["pressure_frame"],
+                "Interpretation Risk": row["interpretation_risk"],
+                "What Would Confirm It": row["validation_signal"]
             })
 
-    if case_rows:
-        st.dataframe(pd.DataFrame(case_rows), use_container_width=True, hide_index=True)
+    st.dataframe(pd.DataFrame(case_rows), use_container_width=True, hide_index=True)
 
-    st.markdown('<div class="section-title">v11 Direction</div>', unsafe_allow_html=True)
-
-    col1, col2 = st.columns(2)
-
-    with col1:
-        st.markdown("""
-        <div style='background:#dcfce7;border:1px solid #bbf7d0;border-left:4px solid #16a34a;border-radius:10px;padding:1.2rem 1.5rem;'>
-            <div style='font-family:Sora,sans-serif;font-size:0.95rem;font-weight:700;color:#166534;margin-bottom:0.6rem'>Build Pressure</div>
-            <div style='font-size:0.82rem;color:#14532d;line-height:1.8;'>
-                Focused on where physical construction activity is most likely to move in the near term.<br><br>
-                Most relevant to contractors, suppliers, subcontractors and workforce planning.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-    with col2:
-        st.markdown("""
-        <div style='background:#fef3c7;border:1px solid #fde68a;border-left:4px solid #d97706;border-radius:10px;padding:1.2rem 1.5rem;'>
-            <div style='font-family:Sora,sans-serif;font-size:0.95rem;font-weight:700;color:#92400e;margin-bottom:0.6rem'>Constraint Pressure</div>
-            <div style='font-size:0.82rem;color:#78350f;line-height:1.8;'>
-                Focused on where approved pipeline or demand exists, but delivery appears delayed by feasibility,
-                finance, cost, staging or market conditions.
-            </div>
-        </div>
-        """, unsafe_allow_html=True)
-
-# TAB 3 — v9 vs v10 Comparison
-with tab3:
+with tab4:
     st.markdown('<div class="section-title">What Changed from v9 to v10</div>', unsafe_allow_html=True)
 
     components.html("""
@@ -364,16 +348,16 @@ with tab3:
                 Ranked suburbs by raw construction activity volume.<br>
                 Fully built-out inner suburbs scored too high.<br>
                 No penalty for saturation.<br>
-                Spearman 0.923 — excellent signal, but activity ≠ stress.
+                Strong signal, but activity is not the same as build certainty.
             </div>
         </div>
         <div style='background:#dcfce7;border:1px solid #bbf7d0;border-left:4px solid #16a34a;border-radius:10px;padding:1.2rem 1.5rem;'>
-            <div style='font-family:Sora,sans-serif;font-size:0.9rem;font-weight:700;color:#166534;margin-bottom:0.6rem'>v10 — Pressure Ranking with Saturation Adjustment</div>
+            <div style='font-family:Sora,sans-serif;font-size:0.9rem;font-weight:700;color:#166534;margin-bottom:0.6rem'>v10 — Pressure Ranking with Interpretation Layer</div>
             <div style='font-size:0.8rem;color:#14532d;line-height:1.8;'>
                 Saturation index penalises high-volume, decelerating suburbs.<br>
                 SHAP decomposition explains every score.<br>
                 SA4 rollup enables regional macro analysis.<br>
-                Rankings better separate raw activity from potential overbuild, but commencement risk still requires interpretation.
+                New framing highlights where industry validation is still needed.
             </div>
         </div>
     </div>
@@ -430,295 +414,41 @@ with tab3:
         )
         st.plotly_chart(fig_down, use_container_width=True)
 
-    st.markdown('<div class="section-title">Blind Spots Fixed in v9 (Now Correctly Identified)</div>', unsafe_allow_html=True)
-
-    blind_spots = [
-        {"Suburb": "Footscray", "State": "VIC", "v8 Rank": "Outside top 200", "v9 Rank": "#11", "v10 Rank": None, "Urban Renewal Score": 2.93},
-        {"Suburb": "Brunswick South", "State": "VIC", "v8 Rank": "Outside top 200", "v9 Rank": "#6", "v10 Rank": None, "Urban Renewal Score": 1.40},
-        {"Suburb": "Wollongong East", "State": "NSW", "v8 Rank": "Outside top 200", "v9 Rank": "#14", "v10 Rank": None, "Urban Renewal Score": 2.18},
-        {"Suburb": "Zetland", "State": "NSW", "v8 Rank": "Outside top 200", "v9 Rank": "#93", "v10 Rank": None, "Urban Renewal Score": 3.13},
-        {"Suburb": "Rhodes", "State": "NSW", "v8 Rank": "Outside top 200", "v9 Rank": "#127", "v10 Rank": None, "Urban Renewal Score": 2.80},
-        {"Suburb": "Kangaroo Point", "State": "QLD", "v8 Rank": "Outside top 200", "v9 Rank": "#16", "v10 Rank": None, "Urban Renewal Score": 3.17},
-        {"Suburb": "Fremantle", "State": "WA", "v8 Rank": "Outside top 200", "v9 Rank": "#5", "v10 Rank": None, "Urban Renewal Score": 2.39},
-    ]
-
-    for bs in blind_spots:
-        match = v10[v10["sa2_name"].str.contains(bs["Suburb"], case=False, na=False)]
-        bs["v10 Rank"] = f"#{int(match.iloc[0]['v10_rank'])}" if len(match) > 0 else bs["v9 Rank"]
-
-    st.dataframe(pd.DataFrame(blind_spots), use_container_width=True, hide_index=True)
-
-    st.markdown('<div class="section-title">v9 Score vs v10 Score — Saturation Effect</div>', unsafe_allow_html=True)
-    fig_scatter = px.scatter(
-        v10,
-        x="v9_score",
-        y="v10_score",
-        color="saturation_index",
-        color_continuous_scale="RdYlGn_r",
-        hover_name="sa2_name",
-        hover_data={"state": True, "v9_rank": True, "v10_rank": True, "saturation_index": ":.3f"},
-        labels={"v9_score": "v9 Score", "v10_score": "v10 Adjusted Score", "saturation_index": "Saturation"},
-        title="Suburbs below the diagonal were penalised by the saturation index",
-    )
-    fig_scatter.add_shape(
-        type="line",
-        x0=v10["v9_score"].min(),
-        y0=v10["v9_score"].min(),
-        x1=v10["v9_score"].max(),
-        y1=v10["v9_score"].max(),
-        line=dict(color="#94a3b8", dash="dash")
-    )
-    fig_scatter.update_layout(
-        height=480,
-        plot_bgcolor="#f7faff",
-        paper_bgcolor="#ffffff",
-        font=dict(family="Inter", size=12, color="#1a2332"),
-    )
-    st.plotly_chart(fig_scatter, use_container_width=True)
-
-# TAB 4 — SA4 Regional View
-with tab4:
+with tab5:
     st.markdown('<div class="section-title">SA4 Regional Pressure Rankings</div>', unsafe_allow_html=True)
-
-    st.markdown("""
-    <div style='background:#e8f0fb;border-radius:10px;padding:1rem 1.4rem;margin-bottom:1.2rem;font-size:0.85rem;color:#1e3a5f;line-height:1.7;'>
-    SA4 regions are Statistical Area Level 4 — the macro geography used by the ABS.
-    Each region aggregates multiple suburbs. This view shows average pressure across all suburbs within each region,
-    the proportion flagged as high pressure, and the single highest-scoring suburb in each region.
-    </div>
-    """, unsafe_allow_html=True)
 
     sa4 = v10.groupby(["sa4_name", "state"]).agg(
         suburb_count=("sa2_name", "count"),
-        high_pressure_count=("high_pressure_v9", "sum"),
         avg_composite_score=("v10_score", "mean"),
-        max_composite_score=("v10_score", "max"),
         top_suburb=("sa2_name", lambda x: x.loc[v10.loc[x.index, "v10_score"].idxmax()]),
     ).reset_index()
 
     sa4["sa4_rank"] = sa4["avg_composite_score"].rank(ascending=False).astype(int)
-    sa4["high_pressure_pct"] = (sa4["high_pressure_count"] / sa4["suburb_count"] * 100).round(1)
     sa4 = sa4.sort_values("sa4_rank")
 
-    top20_sa4 = sa4.sort_values("sa4_rank").head(20)
+    st.dataframe(sa4, use_container_width=True, height=500, hide_index=True)
 
-    fig_sa4 = go.Figure()
-    fig_sa4.add_trace(go.Bar(
-        y=top20_sa4["sa4_name"] + " (" + top20_sa4["state"] + ")",
-        x=top20_sa4["avg_composite_score"],
-        orientation="h",
-        marker=dict(
-            color=top20_sa4["high_pressure_pct"],
-            colorscale="Blues",
-            showscale=True,
-            colorbar=dict(title="% High Pressure"),
-        ),
-        text=top20_sa4["top_suburb"],
-        textposition="outside",
-        hovertemplate="<b>%{y}</b><br>Avg Score: %{x:.2f}<br>Top suburb: %{text}<extra></extra>",
-    ))
-    fig_sa4.update_layout(
-        title="Top 20 SA4 Regions by Average Pressure Score",
-        xaxis_title="Average Composite Score",
-        yaxis=dict(autorange="reversed"),
-        height=560,
-        plot_bgcolor="#f7faff",
-        paper_bgcolor="#ffffff",
-        font=dict(family="Inter", size=12, color="#1a2332"),
-        margin=dict(l=20, r=120, t=50, b=20),
-    )
-    st.plotly_chart(fig_sa4, use_container_width=True)
-
-    col_a, col_b = st.columns(2)
-
-    with col_a:
-        st.markdown('<div class="section-title">% High Pressure Suburbs by Region</div>', unsafe_allow_html=True)
-        top15_pct = sa4.sort_values("high_pressure_pct", ascending=False).head(15)
-        fig_pct = px.bar(
-            top15_pct,
-            x="high_pressure_pct",
-            y="sa4_name",
-            orientation="h",
-            color="high_pressure_pct",
-            color_continuous_scale="Reds",
-            labels={"high_pressure_pct": "% High Pressure", "sa4_name": "SA4 Region"},
-        )
-        fig_pct.update_layout(
-            height=420,
-            plot_bgcolor="#f7faff",
-            paper_bgcolor="#ffffff",
-            font=dict(family="Inter", size=11),
-            showlegend=False,
-            yaxis=dict(autorange="reversed"),
-            margin=dict(l=10, r=20, t=20, b=20),
-            coloraxis_showscale=False,
-        )
-        st.plotly_chart(fig_pct, use_container_width=True)
-
-    with col_b:
-        st.markdown('<div class="section-title">Suburb Count by SA4 Region</div>', unsafe_allow_html=True)
-        top15_count = sa4.sort_values("suburb_count", ascending=False).head(15)
-        fig_count = px.bar(
-            top15_count,
-            x="suburb_count",
-            y="sa4_name",
-            orientation="h",
-            color="avg_composite_score",
-            color_continuous_scale="Blues",
-            labels={"suburb_count": "Suburbs", "sa4_name": "SA4 Region"},
-        )
-        fig_count.update_layout(
-            height=420,
-            plot_bgcolor="#f7faff",
-            paper_bgcolor="#ffffff",
-            font=dict(family="Inter", size=11),
-            showlegend=False,
-            yaxis=dict(autorange="reversed"),
-            margin=dict(l=10, r=20, t=20, b=20),
-            coloraxis_showscale=False,
-        )
-        st.plotly_chart(fig_count, use_container_width=True)
-
-    st.markdown('<div class="section-title">Full SA4 Rankings Table</div>', unsafe_allow_html=True)
-    sa4_display = sa4[["sa4_rank", "sa4_name", "state", "avg_composite_score", "high_pressure_pct", "suburb_count", "top_suburb"]].copy()
-    sa4_display.columns = ["Rank", "SA4 Region", "State", "Avg Score", "% High Pressure", "Suburbs", "Top Suburb"]
-    sa4_display["Avg Score"] = sa4_display["Avg Score"].round(2)
-    st.dataframe(sa4_display, use_container_width=True, height=480, hide_index=True)
-
-# TAB 5 — Suburb Search
-with tab5:
+with tab6:
     st.markdown('<div class="section-title">Suburb Search</div>', unsafe_allow_html=True)
-    search = st.text_input("Search", label_visibility="collapsed", placeholder="Search any suburb — e.g. Ripley, Footscray, Fremantle...")
+    search = st.text_input("Search", label_visibility="collapsed", placeholder="Search any suburb")
 
     if search:
-        found_v9 = results[results["sa2_name"].str.contains(search, case=False, na=False)]
-        found_v10 = v10[v10["sa2_name"].str.contains(search, case=False, na=False)]
-
-        if len(found_v9) > 0:
-            for _, row in found_v9.iterrows():
-                score = row["pressure_score"]
-                rank_v9 = int(row["national_rank"])
-                cls = "score-high" if rank_v9 <= 50 else "score-med" if rank_v9 <= 200 else "score-low"
-                signal_label = "Critical" if rank_v9 <= 50 else "High" if rank_v9 <= 200 else "Moderate"
-
-                v10_row = found_v10[found_v10["sa2_name"] == row["sa2_name"]]
-                rank_v10 = int(v10_row.iloc[0]["v10_rank"]) if len(v10_row) > 0 else rank_v9
-                score_v10 = round(v10_row.iloc[0]["v10_score"], 2) if len(v10_row) > 0 else score
-                sat_idx = round(v10_row.iloc[0]["saturation_index"], 3) if len(v10_row) > 0 else 0
-                top_drivers = str(v10_row.iloc[0]["top_3_drivers"]) if len(v10_row) > 0 else ""
-                rank_shift = rank_v9 - rank_v10
-
-                shift_html = ""
-                if rank_shift > 0:
-                    shift_html = f"<span style='color:#16a34a;font-size:0.8rem;margin-left:0.5rem'>▲ Rose {rank_shift} places in v10</span>"
-                elif rank_shift < 0:
-                    shift_html = f"<span style='color:#dc2626;font-size:0.8rem;margin-left:0.5rem'>▼ Fell {abs(rank_shift)} places in v10 (saturation)</span>"
-
-                suburb_html = "<div class='suburb-row'>"
-                suburb_html += f"<div><b style='color:#1e3a5f;font-size:1rem'>{row['sa2_name']}</b>"
-                suburb_html += f"<span style='color:#6b8cae;font-size:0.82rem'> &nbsp;{row['state']}</span>"
-                suburb_html += f"<span style='color:#6b8cae;font-size:0.78rem'> &nbsp;·&nbsp; v9 Rank #{rank_v9} &nbsp;·&nbsp; v10 Rank #{rank_v10}</span>"
-                suburb_html += shift_html + "</div>"
-                suburb_html += "<div style='text-align:right'>"
-                suburb_html += f"<span class='{cls}' style='font-size:1.1rem'>{score}/100</span>"
-                suburb_html += f"<span style='color:#6b8cae;font-size:0.8rem;margin-left:1rem'>{signal_label} &nbsp;|&nbsp; Pop growth {row['erp_change_pct']}% &nbsp;|&nbsp; {int(row['years_of_growth'])}/22 growth years &nbsp;|&nbsp; Saturation {sat_idx}</span>"
-                suburb_html += "</div></div>"
-                st.markdown(suburb_html, unsafe_allow_html=True)
-
-                if top_drivers and top_drivers != "nan":
-                    driver_parts = [d.strip() for d in top_drivers.split(" | ")]
-                    driver_names, driver_vals = [], []
-                    for d in driver_parts:
-                        try:
-                            name, val = d.rsplit(":", 1)
-                            driver_names.append(name.strip())
-                            driver_vals.append(float(val.strip()))
-                        except Exception:
-                            pass
-
-                    if driver_names:
-                        colors = ["#16a34a" if v > 0 else "#dc2626" for v in driver_vals]
-                        fig_shap = go.Figure(go.Bar(
-                            x=driver_vals,
-                            y=driver_names,
-                            orientation="h",
-                            marker_color=colors,
-                            text=[f"{'+' if v > 0 else ''}{v:.3f}" for v in driver_vals],
-                            textposition="outside",
-                        ))
-                        fig_shap.update_layout(
-                            title=f"Why did {row['sa2_name']} score {score}/100? — SHAP Drivers",
-                            xaxis_title="SHAP Value (positive = pushes score up)",
-                            yaxis=dict(autorange="reversed"),
-                            height=280,
-                            plot_bgcolor="#f7faff",
-                            paper_bgcolor="#ffffff",
-                            font=dict(family="Inter", size=12, color="#1a2332"),
-                            margin=dict(l=20, r=80, t=50, b=20),
-                            showlegend=False,
-                        )
-                        st.plotly_chart(fig_shap, use_container_width=True)
-
-                st.markdown(f"""
-                <div class="stat-card">
-                    <div style='font-family:Sora,sans-serif;font-size:1rem;font-weight:600;color:#1e3a5f;margin-bottom:0.8rem'>
-                        {row['sa2_name']} — Full Stats
-                    </div>
-                    <div style='display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;'>
-                        <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>v9 Score</span><br>
-                            <span style='font-size:1.3rem;font-weight:700;color:#d97706'>{score}/100</span></div>
-                        <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>v10 Score</span><br>
-                            <span style='font-size:1.3rem;font-weight:700;color:#2563a8'>{score_v10}/100</span></div>
-                        <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>v9 Rank</span><br>
-                            <span style='font-size:1.3rem;font-weight:700;color:#d97706'>#{rank_v9}</span></div>
-                        <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>v10 Rank</span><br>
-                            <span style='font-size:1.3rem;font-weight:700;color:#2563a8'>#{rank_v10}</span></div>
-                        <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>Saturation Index</span><br>
-                            <span style='font-size:1.3rem;font-weight:700;color:#1e3a5f'>{sat_idx}</span></div>
-                        <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>Pop Growth</span><br>
-                            <span style='font-size:1.3rem;font-weight:700;color:#1e3a5f'>{row['erp_change_pct']}%</span></div>
-                        <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>20yr Growth</span><br>
-                            <span style='font-size:1.3rem;font-weight:700;color:#1e3a5f'>{round(row['growth_20yr'] * 100, 1)}%</span></div>
-                        <div><span style='font-size:0.72rem;color:#6b8cae;text-transform:uppercase;letter-spacing:1px'>Growth Years</span><br>
-                            <span style='font-size:1.3rem;font-weight:700;color:#1e3a5f'>{int(row['years_of_growth'])}/22</span></div>
-                    </div>
-                </div>""", unsafe_allow_html=True)
-
-                if pd.notna(row.get("lat")) and pd.notna(row.get("lon")):
-                    st.map(
-                        pd.DataFrame({"lat": [row["lat"]], "lon": [row["lon"]]}),
-                        latitude=row["lat"],
-                        longitude=row["lon"],
-                        zoom=11
-                    )
+        found = v10[v10["sa2_name"].str.contains(search, case=False, na=False)]
+        if len(found) > 0:
+            display = found[[
+                "sa2_name", "state", "v10_rank", "v10_score", "market_archetype",
+                "pressure_frame", "interpretation_risk", "validation_signal"
+            ]].copy()
+            display.columns = [
+                "Suburb", "State", "v10 Rank", "v10 Score", "Market Archetype",
+                "Pressure Frame", "Interpretation Risk", "What Would Confirm It"
+            ]
+            st.dataframe(display, use_container_width=True, hide_index=True)
         else:
-            st.markdown("<span style='color:#6b8cae'>No suburb found. Try a different name.</span>", unsafe_allow_html=True)
+            st.info("No suburb found.")
 
-# TAB 6 — Pressure Map
-with tab6:
-    legend_html = """
-    <div style='background:linear-gradient(135deg,#1e3a5f 0%,#1a3358 100%);border-radius:14px;
-    padding:1.4rem 2rem;margin-bottom:1.2rem;box-shadow:0 4px 18px rgba(30,58,95,0.18);
-    display:flex;gap:3rem;align-items:flex-start;'>
-        <div style='flex:1;border-left:3px solid #f87171;padding-left:1rem;'>
-            <div style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:0.3rem'>Top 50 Nationally</div>
-            <div style='font-family:Sora,sans-serif;font-size:0.95rem;font-weight:700;color:#f87171;margin-bottom:0.3rem'>Critical Pressure</div>
-            <div style='font-size:0.76rem;color:#cbd5e1;line-height:1.6;'>All signals align — sustained population growth, strong approval momentum, and consistent long-run history.</div>
-        </div>
-        <div style='flex:1;border-left:3px solid #fbbf24;padding-left:1rem;'>
-            <div style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:0.3rem'>Rank 51–200</div>
-            <div style='font-family:Sora,sans-serif;font-size:0.95rem;font-weight:700;color:#fbbf24;margin-bottom:0.3rem'>High Pressure</div>
-            <div style='font-size:0.76rem;color:#cbd5e1;line-height:1.6;'>Most indicators elevated — strong population trend, above-average approvals, positive momentum.</div>
-        </div>
-        <div style='flex:1;border-left:3px solid #93c5fd;padding-left:1rem;'>
-            <div style='font-size:0.68rem;color:#a8c8e8;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:0.3rem'>Rank 201+</div>
-            <div style='font-family:Sora,sans-serif;font-size:0.95rem;font-weight:700;color:#93c5fd;margin-bottom:0.3rem'>Moderate / Low</div>
-            <div style='font-size:0.76rem;color:#cbd5e1;line-height:1.6;'>Some growth signals present but model confidence is lower.</div>
-        </div>
-    </div>
-    <p style='font-size:0.82rem;color:#6b8cae;margin-top:0.2rem'>2,438 suburb boundaries shown · Hover any suburb for details</p>
-    """
-    st.markdown(legend_html, unsafe_allow_html=True)
+with tab7:
+    st.markdown('<div class="section-title">Pressure Map</div>', unsafe_allow_html=True)
 
     for feature in geojson["features"]:
         name = feature["properties"].get("SA2_NAME21", "")
@@ -738,9 +468,10 @@ with tab6:
         get_line_color=[255, 255, 255, 60],
         line_width_min_pixels=1,
     )
+
     view = pdk.ViewState(latitude=-27.0, longitude=134.0, zoom=3.5, pitch=0)
     tooltip = {
-        "html": "<b>{SA2_NAME21}</b> ({state})<br><b>{signal}</b><br>National Rank: <b>#{national_rank}</b><br>Pressure Score: <b>{pressure_score}</b>/100<br>Pop Growth: {erp_change_pct}%",
+        "html": "<b>{SA2_NAME21}</b><br><b>{signal}</b><br>National Rank: <b>#{national_rank}</b>",
         "style": {"backgroundColor": "#1e3a5f", "color": "white", "fontSize": "13px", "padding": "8px", "borderRadius": "6px"}
     }
 
@@ -751,21 +482,6 @@ with tab6:
         map_style="https://basemaps.cartocdn.com/gl/positron-gl-style/style.json"
     ))
 
-    st.markdown('<div class="section-title">All Suburbs Ranked</div>', unsafe_allow_html=True)
-    filtered = results.copy().sort_values(["pressure_score", "national_rank"], ascending=[False, True])
-    display = filtered[
-        ["national_rank", "sa2_name", "state", "pressure_score", "erp_change_pct", "growth_20yr", "years_of_growth", "dwellings_2526_fytd", "signal"]
-    ].copy()
-    display.columns = [
-        "National Rank", "Suburb", "State", "Pressure Score", "Pop Growth %",
-        "20yr Growth", "Consecutive Growth Years", "2025-26 Approvals FYTD", "Signal"
-    ]
-    display["20yr Growth"] = (display["20yr Growth"] * 100).round(1).astype(str) + "%"
-    display["Pressure Score"] = display["Pressure Score"].round(1)
-    display["2025-26 Approvals FYTD"] = display["2025-26 Approvals FYTD"].apply(lambda x: int(x) if pd.notna(x) else "N/A")
-    st.dataframe(display, use_container_width=True, height=480, hide_index=True)
-
-# About
 st.markdown('<div class="section-title">About This Model</div>', unsafe_allow_html=True)
 st.markdown("""
 <div class="about-box">
@@ -773,25 +489,19 @@ st.markdown("""
 Version 10 builds on v9's XGBoost framework trained on suburb-level approvals, demographic and pipeline signals across 2,442 suburbs nationally.
 The model is designed to rank <b>construction pressure</b>, not to directly observe commencements at suburb level.<br><br>
 
-<b style='color:#1e3a5f'>What v10 Improves</b><br>
-v10 adds a saturation adjustment to reduce overscoring in suburbs that already appear heavily delivered or decelerating.
-It also adds SHAP-based driver analysis for explainability and SA4 regional rollup for macro interpretation.<br><br>
+<b style='color:#1e3a5f'>What This New Layer Adds</b><br>
+The app now adds a practical interpretation layer that flags where high rankings are more likely to reflect near-term build pressure,
+and where they may instead reflect constrained pipeline that still needs industry validation.<br><br>
 
 <b style='color:#1e3a5f'>Key Interpretation Gap</b><br>
 The main unresolved issue is <b>approvals-to-commencement conversion</b>. The model currently sees approvals and pipeline pressure more directly
 than actual on-site conversion, particularly in apartment and urban renewal precincts where feasibility, staging, and finance can delay delivery.<br><br>
 
-<b style='color:#1e3a5f'>Next Version</b><br>
-v11 is intended to split the framework into two related indices:
-<b>Build Pressure</b> for near-term on-site activity, and <b>Constraint Pressure</b> for locations where approved pipeline exists but delivery appears constrained.<br><br>
-
 <span class="tag">XGBoost</span>
-<span class="tag">SHAP</span>
-<span class="tag">Spearman 0.923</span>
-<span class="tag">31 Features</span>
-<span class="tag">Saturation Adjustment</span>
+<span class="tag">Interpretation Layer</span>
+<span class="tag">Build Pressure</span>
+<span class="tag">Constraint Pressure</span>
 <span class="tag">SA4 Rollup</span>
 <span class="tag">Streamlit</span>
-<span class="tag">Python</span>
 </div>
 """, unsafe_allow_html=True)
