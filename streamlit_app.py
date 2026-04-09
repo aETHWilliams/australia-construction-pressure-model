@@ -85,9 +85,19 @@ def rank_to_map_color(rank):
 st.markdown("""
 <div class="header-wrap">
     <div class="header-title">Australia Construction Pressure Index</div>
-    <div class="header-sub">Predictive ML Model &nbsp;·&nbsp; 7.3M Records &nbsp;·&nbsp; 2,442 Suburbs Nationally &nbsp;·&nbsp; Model v10 &nbsp;·&nbsp; By Ethan Williams</div>
+    <div class="header-sub">Suburb-level decision support model &nbsp;·&nbsp; 2,442 suburbs nationally &nbsp;·&nbsp; Model v10 &nbsp;·&nbsp; By Ethan Williams</div>
 </div>
 """, unsafe_allow_html=True)
+
+st.markdown("""
+<div style='background:#ffffff;border:1px solid #dbe8f5;border-radius:12px;padding:1rem 1.2rem;margin-bottom:1.6rem;
+box-shadow:0 2px 8px rgba(37,99,168,0.05);font-size:0.92rem;color:#4a6080;line-height:1.8;'>
+This model ranks Australian suburbs by likely construction pressure using approvals, population and pipeline signals.
+Its main purpose is to distinguish between <b>near-term build pressure</b> and <b>constrained pipeline pressure</b>,
+especially in apartment and urban renewal precincts where approvals and commencements may diverge.
+</div>
+""", unsafe_allow_html=True)
+
 
 # ── Metrics ───────────────────────────────────────────────────────────────────
 c1, c2, c3, c4, c5 = st.columns(5)
@@ -111,26 +121,27 @@ st.markdown("<div style='margin-top: 2rem'></div>", unsafe_allow_html=True)
 st.sidebar.markdown("""
 <div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>What This App Does</div>
 <div style='font-size:0.78rem; color:#4a6080; line-height:1.8; margin-bottom:1.2rem'>
-This tool predicts which Australian suburbs are likely to experience a construction boom <b>before it happens</b>.
-It analyses signals per suburb — population growth, building approval history, socioeconomic data,
-pipeline backlogs, and forward-looking 2025–26 approvals — and assigns every suburb a <b>Pressure Score</b>.
+This tool ranks Australian suburbs by likely construction pressure using approvals, population growth,
+historical delivery, and pipeline signals. It is designed as a <b>decision-support model</b>, not a direct measure of commencements.
 </div>
 
-<div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>v10 Improvements</div>
+<div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>Why This Matters</div>
 <div style='font-size:0.78rem; color:#4a6080; line-height:1.8; margin-bottom:1.2rem'>
-<b>Saturation Index</b> — fully built-out suburbs are now penalised using a dwellings-per-capita proxy, fixing overscoring of dense inner suburbs.<br><br>
-<b>SHAP Score Decomposition</b> — every suburb's score is now broken into its component drivers, showing exactly why it ranked where it did.<br><br>
-<b>SA4 Rollup</b> — suburb scores are aggregated to regional SA4 level, enabling macro-level analysis alongside suburb detail.
+In some apartment and urban renewal precincts, approved dwelling volumes can remain high even when delivery is delayed by
+feasibility, finance, staging, cost, or market conditions. That means approvals and commencements can tell different stories.
 </div>
 
-<div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>Version History</div>
+<div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>v10 Positioning</div>
 <div style='font-size:0.78rem; color:#4a6080; line-height:1.8; margin-bottom:1.2rem'>
-<b>v1–v3</b> — Queensland only. Iterative feature engineering.<br><br>
-<b>v4</b> — National model, 2,442 suburbs. XGBoost + Random Forest. AUC 0.938.<br><br>
-<b>v5</b> — Switched to regression. SHAP explainability added.<br><br>
-<b>v8</b> — Velocity-focused classification. Spearman 0.750.<br><br>
-<b>v9</b> — Urban renewal blind spot fixed. Spearman 0.923. Inner-city precincts correctly identified.<br><br>
-<b>v10 (current)</b> — Saturation index, SHAP decomposition, SA4 rollup.
+<b>Saturation Adjustment</b> — reduces scores for suburbs that already appear heavily built out or decelerating.<br><br>
+<b>SHAP Decomposition</b> — shows which signals are driving each suburb's result.<br><br>
+<b>SA4 Rollup</b> — supports macro regional interpretation alongside suburb-level detail.
+</div>
+
+<div style='font-size:0.82rem; color:#1e3a5f; font-family:Sora,sans-serif; font-weight:600; margin-bottom:0.4rem'>Current Interpretation Gap</div>
+<div style='font-size:0.78rem; color:#4a6080; line-height:1.8; margin-bottom:1.2rem'>
+The main unresolved question is <b>approvals-to-commencement conversion</b>. The model currently sees pipeline pressure more directly
+than actual on-site conversion, which is why the next stage is to separate <b>Build Pressure</b> from <b>Constraint Pressure</b>.
 </div>
 
 <div style='border-top:1px solid #dbe8f5; padding-top:1rem'>
@@ -147,12 +158,14 @@ ABS Building Activity Table 80 (8752.0)
 </div>
 """, unsafe_allow_html=True)
 
+
 # ── Tab Navigation ────────────────────────────────────────────────────────────
-tab1, tab2, tab3, tab4, tab5 = st.tabs([
-    "Top Rankings", 
-    "v9 vs v10 Comparison", 
+tab1, tab2, tab3, tab4, tab5, tab6 = st.tabs([
+    "Executive Summary",
+    "Approvals vs Commencement Risk",
+    "v9 vs v10 Comparison",
     "SA4 Regional View",
-    "Suburb Search", 
+    "Suburb Search",
     "Pressure Map"
 ])
 
@@ -160,6 +173,16 @@ tab1, tab2, tab3, tab4, tab5 = st.tabs([
 # TAB 1 — TOP RANKINGS
 # ═══════════════════════════════════════════════════════════════════════════════
 with tab1:
+    st.markdown('<div class="section-title">Executive Summary</div>', unsafe_allow_html=True)
+
+    st.markdown("""
+    <div style='background:#e8f0fb;border-radius:10px;padding:1rem 1.4rem;margin-bottom:1.2rem;font-size:0.86rem;color:#1e3a5f;line-height:1.8;'>
+    This model is strongest at identifying <b>where pressure signals are accumulating</b>.
+    It is less direct at observing whether approved pipeline is converting into real site activity,
+    especially in apartment and urban renewal markets. That distinction is the main focus of the next version.
+    </div>
+    """, unsafe_allow_html=True)
+
     # Version toggle
     version = st.radio("Model Version", ["v10 (Saturation Adjusted)", "v9 (Original)"], horizontal=True)
     
@@ -255,7 +278,103 @@ with tab1:
 # ═══════════════════════════════════════════════════════════════════════════════
 # TAB 2 — v9 vs v10 COMPARISON
 # ═══════════════════════════════════════════════════════════════════════════════
-with tab2:
+with tab3:
+    st.markdown('<div class="section-title">Approvals vs Commencement Risk</div>', unsafe_allow_html=True)
+
+    st.markdown("""
+    <div style='background:#ffffff;border:1px solid #dbe8f5;border-left:4px solid #2563a8;border-radius:10px;
+    padding:1.2rem 1.4rem;margin-bottom:1.2rem;box-shadow:0 2px 8px rgba(37,99,168,0.05);font-size:0.85rem;
+    color:#4a6080;line-height:1.8;'>
+    In greenfield corridors, approvals often translate into visible construction activity more consistently.
+    In apartment-led and urban renewal precincts, there can be a longer and less reliable lag between approval,
+    feasibility, staging, and actual commencement. This view highlights suburbs where that distinction may matter most.
+    </div>
+    """, unsafe_allow_html=True)
+
+    case_studies = [
+        {
+            "suburb": "Rhodes",
+            "state": "NSW",
+            "type": "Urban renewal / apartment-led",
+            "interpretation": "Likely constrained pipeline",
+            "why": "Large approved pipeline, but approvals may overstate near-term site activity if delivery is delayed."
+        },
+        {
+            "suburb": "Zetland",
+            "state": "NSW",
+            "type": "Inner-city infill",
+            "interpretation": "Likely constrained pipeline",
+            "why": "Dense renewal market where feasibility, staging and timing may weaken approvals-to-commencement conversion."
+        },
+        {
+            "suburb": "Footscray",
+            "state": "VIC",
+            "type": "Urban renewal / mixed-use",
+            "interpretation": "Requires industry validation",
+            "why": "Strong renewal signal, but timing uncertainty remains around actual site mobilisation."
+        },
+        {
+            "suburb": "Docklands",
+            "state": "VIC",
+            "type": "High-density inner metro",
+            "interpretation": "Requires industry validation",
+            "why": "High strategic importance, but paper pipeline may not cleanly translate to near-term construction work."
+        },
+        {
+            "suburb": "Ripley",
+            "state": "QLD",
+            "type": "Greenfield corridor",
+            "interpretation": "Likely near-term build pressure",
+            "why": "In growth corridors, approvals are more likely to align with real delivery activity."
+        }
+    ]
+
+    case_rows = []
+    for case in case_studies:
+        match = v10[v10['sa2_name'].str.contains(case["suburb"], case=False, na=False)]
+        if len(match) > 0:
+            row = match.iloc[0]
+            case_rows.append({
+                "Suburb": row["sa2_name"],
+                "State": row["state"],
+                "v10 Rank": int(row["v10_rank"]),
+                "v10 Score": round(row["v10_score"], 2),
+                "Saturation": round(row.get("saturation_index", 0), 3),
+                "Market Type": case["type"],
+                "Interpretation": case["interpretation"],
+                "Why It Matters": case["why"]
+            })
+
+    if case_rows:
+        case_df = pd.DataFrame(case_rows)
+        st.dataframe(case_df, use_container_width=True, hide_index=True)
+
+    st.markdown('<div class="section-title">v11 Direction</div>', unsafe_allow_html=True)
+
+    col1, col2 = st.columns(2)
+
+    with col1:
+        st.markdown("""
+        <div style='background:#dcfce7;border:1px solid #bbf7d0;border-left:4px solid #16a34a;border-radius:10px;padding:1.2rem 1.5rem;'>
+            <div style='font-family:Sora,sans-serif;font-size:0.95rem;font-weight:700;color:#166534;margin-bottom:0.6rem'>Build Pressure</div>
+            <div style='font-size:0.82rem;color:#14532d;line-height:1.8;'>
+                Focused on where physical construction activity is most likely to move in the near term.<br><br>
+                Most relevant to contractors, suppliers, subcontractors and workforce planning.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+
+    with col2:
+        st.markdown("""
+        <div style='background:#fef3c7;border:1px solid #fde68a;border-left:4px solid #d97706;border-radius:10px;padding:1.2rem 1.5rem;'>
+            <div style='font-family:Sora,sans-serif;font-size:0.95rem;font-weight:700;color:#92400e;margin-bottom:0.6rem'>Constraint Pressure</div>
+            <div style='font-size:0.82rem;color:#78350f;line-height:1.8;'>
+                Focused on where approved pipeline or demand exists, but delivery appears delayed by feasibility,
+                finance, cost, staging or market conditions.
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
+        
     st.markdown('<div class="section-title">What Changed from v9 to v10</div>', unsafe_allow_html=True)
 
     components.html("""
@@ -271,12 +390,12 @@ with tab2:
             </div>
         </div>
         <div style='background:#dcfce7;border:1px solid #bbf7d0;border-left:4px solid #16a34a;border-radius:10px;padding:1.2rem 1.5rem;'>
-            <div style='font-family:Sora,sans-serif;font-size:0.9rem;font-weight:700;color:#166534;margin-bottom:0.6rem'>v10 — Stress Detector</div>
+            <div style='font-family:Sora,sans-serif;font-size:0.9rem;font-weight:700;color:#166534;margin-bottom:0.6rem'>v10 — Pressure Ranking with Saturation Adjustment</div>
             <div style='font-size:0.8rem;color:#14532d;line-height:1.8;'>
                 Saturation index penalises high-volume, decelerating suburbs.<br>
                 SHAP decomposition explains every score.<br>
                 SA4 rollup enables regional macro analysis.<br>
-                Rankings reflect genuine demand/supply imbalance.
+                Rankings better separate raw activity from potential overbuild, but commencement risk still requires interpretation.
             </div>
         </div>
     </div>
@@ -384,7 +503,7 @@ with tab2:
 # ═══════════════════════════════════════════════════════════════════════════════
 # TAB 3 — SA4 REGIONAL VIEW
 # ═══════════════════════════════════════════════════════════════════════════════
-with tab3:
+with tab4:
     st.markdown('<div class="section-title">SA4 Regional Pressure Rankings</div>', unsafe_allow_html=True)
 
     st.markdown("""
@@ -492,7 +611,7 @@ with tab3:
 # ═══════════════════════════════════════════════════════════════════════════════
 # TAB 4 — SUBURB SEARCH
 # ═══════════════════════════════════════════════════════════════════════════════
-with tab4:
+with tab5:
     st.markdown('<div class="section-title">Suburb Search</div>', unsafe_allow_html=True)
     search = st.text_input("Search", label_visibility="collapsed", placeholder="Search any suburb — e.g. Ripley, Footscray, Fremantle...")
 
@@ -601,7 +720,7 @@ with tab4:
 # ═══════════════════════════════════════════════════════════════════════════════
 # TAB 5 — PRESSURE MAP
 # ═══════════════════════════════════════════════════════════════════════════════
-with tab5:
+with tab6:
     legend_html = """
     <div style='background:linear-gradient(135deg,#1e3a5f 0%,#1a3358 100%);border-radius:14px;
     padding:1.4rem 2rem;margin-bottom:1.2rem;box-shadow:0 4px 18px rgba(30,58,95,0.18);
@@ -668,24 +787,29 @@ st.markdown('<div class="section-title">About This Model</div>', unsafe_allow_ht
 st.markdown("""
 <div class="about-box">
 <b style='color:#1e3a5f'>Methodology</b><br>
-Version 10 builds on v9's XGBoost classifier trained on ABS building approval data across 2,442 suburbs nationally.
-v9 introduced an urban renewal signal that fixed a systematic blind spot in inner-city precincts, achieving a Spearman rank correlation of 0.923.
-v10 adds a saturation index that penalises fully built-out suburbs, SHAP-based score decomposition for explainability, and SA4 regional rollup.<br><br>
-<b style='color:#1e3a5f'>What's New in v10</b><br>
-Saturation index uses dwellings-per-capita and growth deceleration to penalise suburbs where construction activity is high but capacity is exhausted.
-SHAP values from the XGBoost model explain every suburb's score in terms of its top contributing features.
-SA4 rollup aggregates suburb scores to regional level for macro analysis.<br><br>
-<b style='color:#1e3a5f'>Known Limitations</b><br>
-No commencement data at SA2 level — pipeline proxy only. total_dwellings_2024-25 still dominates feature importance at 28.5%, 
-meaning the model remains closer to an activity detector than a pure stress detector. v11 will split into Build Pressure and Constraint Pressure indices.<br><br>
+Version 10 builds on v9's XGBoost framework trained on suburb-level approvals, demographic and pipeline signals across 2,442 suburbs nationally.
+The model is designed to rank <b>construction pressure</b>, not to directly observe commencements at suburb level.<br><br>
+
+<b style='color:#1e3a5f'>What v10 Improves</b><br>
+v10 adds a saturation adjustment to reduce overscoring in suburbs that already appear heavily delivered or decelerating.
+It also adds SHAP-based driver analysis for explainability and SA4 regional rollup for macro interpretation.<br><br>
+
+<b style='color:#1e3a5f'>Key Interpretation Gap</b><br>
+The main unresolved issue is <b>approvals-to-commencement conversion</b>. The model currently sees approvals and pipeline pressure more directly
+than actual on-site conversion, particularly in apartment and urban renewal precincts where feasibility, staging, and finance can delay delivery.<br><br>
+
+<b style='color:#1e3a5f'>Next Version</b><br>
+v11 is intended to split the framework into two related indices:
+<b>Build Pressure</b> for near-term on-site activity, and <b>Constraint Pressure</b> for locations where approved pipeline exists but delivery appears constrained.<br><br>
+
 <span class="tag">XGBoost</span>
 <span class="tag">SHAP</span>
 <span class="tag">Spearman 0.923</span>
 <span class="tag">31 Features</span>
-<span class="tag">Saturation Index</span>
+<span class="tag">Saturation Adjustment</span>
 <span class="tag">SA4 Rollup</span>
-<span class="tag">scikit-learn</span>
 <span class="tag">Streamlit</span>
 <span class="tag">Python</span>
 </div>
 """, unsafe_allow_html=True)
+
