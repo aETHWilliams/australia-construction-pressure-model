@@ -340,6 +340,29 @@ with tab3:
     </div>
     """, unsafe_allow_html=True)
 
+    CASE_NARRATIVES = {
+        "Rhodes": {
+            "why": "Rhodes sits on a peninsula with constrained land supply and ageing strata stock. Large apartment approvals have accumulated for years but delivery has been intermittent — feasibility is sensitive to construction costs and pre-sales, meaning approval volumes consistently outrun actual site mobilisation.",
+            "watch_for": "Demolition permits, enabling works contracts, tower crane activity along Rhodes waterfront."
+        },
+        "Zetland": {
+            "why": "Zetland (Green Square) was one of Australia's most ambitious urban renewal corridors. Much of the initial wave is now delivered, leaving a thinner but still-approved pipeline sitting behind slower feasibility. The suburb looks active in approvals data but the easy sites are largely gone — remaining pipeline is more complex and cost-sensitive.",
+            "watch_for": "New DA lodgements on remaining super-lots, fresh pre-sales campaigns, updated staging plans from major developers."
+        },
+        "Footscray": {
+            "why": "Footscray has a large student and renter population and sits in a corridor of strong Melbourne inner-west demand. However, approved high-rise projects have repeatedly stalled due to construction financing conditions and pre-sale thresholds. The approval pipeline looks substantial; actual crane count is a more reliable leading indicator.",
+            "watch_for": "Crane mobilisation, construction finance announcements, project re-launches after prior stalls."
+        },
+        "Docklands": {
+            "why": "Docklands has one of the longest histories of approvals-to-commencement divergence in Australia. Much of the precinct is now mature and partially saturated — remaining approved sites face high holding costs, complex interfaces with public realm, and appetite constraints from apartment investors. High approval numbers here can be misleading.",
+            "watch_for": "Site hoarding, demolition activity on remaining vacant lots, new developer entrants acquiring stalled sites."
+        },
+        "Ripley": {
+            "why": "Ripley is a different case to the others — it is a high-conviction greenfield growth corridor in South East Queensland with strong population demand and active estate staging. Approvals here are more likely to convert because subdivision and servicing are already underway. It appears in this list as the contrast case: approvals here carry lower interpretation risk.",
+            "watch_for": "Estate stage releases, civil servicing contracts, land titling volumes — all typically precede dwelling commencements by 6–12 months."
+        },
+    }
+
     case_names = ["Rhodes", "Zetland", "Footscray", "Docklands", "Ripley"]
     case_rows = []
     for name in case_names:
@@ -358,6 +381,42 @@ with tab3:
             })
 
     st.dataframe(pd.DataFrame(case_rows), use_container_width=True, hide_index=True)
+
+    st.markdown("<div style='margin-top:1.8rem'></div>", unsafe_allow_html=True)
+    st.markdown('<div class="section-title">Case Study Narratives</div>', unsafe_allow_html=True)
+
+    for name, narrative in CASE_NARRATIVES.items():
+        match = v10[v10["sa2_name"].str.contains(name, case=False, na=False)]
+        if len(match) == 0:
+            continue
+        row = match.iloc[0]
+        risk = row["interpretation_risk"]
+        risk_color = "#dc2626" if risk == "High" else "#d97706" if risk == "Medium" else "#16a34a"
+        archetype = row["market_archetype"]
+
+        st.markdown(f"""
+        <div style='background:#ffffff;border:1px solid #dbe8f5;border-radius:12px;padding:1.4rem 1.6rem;
+        margin-bottom:1rem;box-shadow:0 2px 8px rgba(37,99,168,0.06);'>
+            <div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:0.8rem;'>
+                <div style='font-family:Sora,sans-serif;font-size:1rem;font-weight:700;color:#1e3a5f;'>
+                    {row["sa2_name"]} <span style='color:#6b8cae;font-weight:400;font-size:0.85rem'>— {row["state"]}</span>
+                </div>
+                <div style='display:flex;gap:0.5rem;align-items:center;'>
+                    <span style='background:#e8f0fb;color:#2563a8;font-size:0.72rem;font-weight:500;padding:0.2rem 0.6rem;border-radius:20px;'>{archetype}</span>
+                    <span style='background:{risk_color}18;color:{risk_color};font-size:0.72rem;font-weight:600;padding:0.2rem 0.6rem;border-radius:20px;'>
+                        {risk} Interpretation Risk
+                    </span>
+                    <span style='font-size:0.78rem;color:#6b8cae;'>v10 Rank <b style="color:#1e3a5f;">#{int(row["v10_rank"])}</b></span>
+                </div>
+            </div>
+            <div style='font-size:0.84rem;color:#4a6080;line-height:1.85;margin-bottom:0.8rem;'>
+                {narrative["why"]}
+            </div>
+            <div style='background:#f0f4f8;border-radius:8px;padding:0.7rem 1rem;font-size:0.8rem;color:#1e3a5f;'>
+                <b>What would confirm near-term activity:</b> {narrative["watch_for"]}
+            </div>
+        </div>
+        """, unsafe_allow_html=True)
 
 with tab4:
     st.markdown('<div class="section-title">What Changed from v9 to v10</div>', unsafe_allow_html=True)
